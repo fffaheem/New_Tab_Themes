@@ -1,6 +1,6 @@
 {
   "info": "matrix_default: 'true' = always load, 'once' = load once, 'no' = disable",
-  "matrix_default" : "true",
+  "matrix_default" : "once",
   "matrix_search" : "https://www.google.com/search?q=a",
   "matrix_settings": {
     "animationSpeed": 18,
