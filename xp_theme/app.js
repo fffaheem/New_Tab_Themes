@@ -13,8 +13,35 @@ const App = {
   lastCpuInfo: null,
   notepadStorageKey: "xp-notepad-document",
   notepadSaveTimer: null,
+  themeStorageKey: "xp-color-scheme",
+  wallpaperStorageKey: "xp-wallpaper",
+  customWallpapersStorageKey: "xp-custom-wallpapers",
+  defaultWallpaper: "assets/images/wallpaper/Bliss.jpg",
+  wallpapers: [
+    { name: "Bliss", path: "assets/images/wallpaper/Bliss.jpg" },
+    { name: "Ascent", path: "assets/images/wallpaper/Ascent.jpg" },
+    { name: "Autumn", path: "assets/images/wallpaper/Autumn.jpg" },
+    { name: "Azul", path: "assets/images/wallpaper/Azul.jpg" },
+    { name: "Follow", path: "assets/images/wallpaper/Follow.jpg" },
+    { name: "Friend", path: "assets/images/wallpaper/Friend.jpg" },
+    { name: "Moon flower", path: "assets/images/wallpaper/Moon flower.jpg" },
+    { name: "Radiance", path: "assets/images/wallpaper/Radiance.jpg" },
+    {
+      name: "Red moon desert",
+      path: "assets/images/wallpaper/Red moon desert.jpg",
+    },
+    { name: "Stonehenge", path: "assets/images/wallpaper/Stonehenge.jpg" },
+    { name: "Tulips", path: "assets/images/wallpaper/Tulips.jpg" },
+    {
+      name: "Vortec space",
+      path: "assets/images/wallpaper/Vortec space.jpg",
+    },
+    { name: "Wind", path: "assets/images/wallpaper/Wind.jpg" },
+  ],
+  customWallpapers: [],
 
   init() {
+    this.initThemes();
     this.initClock();
     this.initStartButton();
     this.initStartMenuInteraction();
@@ -218,6 +245,237 @@ const App = {
     });
   },
 
+  initThemes() {
+    const desktop = document.getElementById("desktop");
+    const windowEl = document.getElementById("display-properties-window");
+    const closeBtn = document.getElementById("display-close");
+    const okBtn = document.getElementById("display-ok");
+    const cancelBtn = document.getElementById("display-cancel");
+    const applyBtn = document.getElementById("display-apply");
+    const radios = [...document.querySelectorAll('input[name="xp-theme"]')];
+    const tabBtns = [...document.querySelectorAll("[data-display-tab]")];
+    const panels = [...document.querySelectorAll("[data-display-panel]")];
+    const wallpaperOptions = document.getElementById("wallpaper-options");
+    if (
+      !desktop ||
+      !windowEl ||
+      !closeBtn ||
+      !okBtn ||
+      !cancelBtn ||
+      !applyBtn
+    ) {
+      return;
+    }
+
+    const savedTheme = localStorage.getItem(this.themeStorageKey) || "luna";
+    this.applyTheme(savedTheme);
+
+    const storedCustom = localStorage.getItem(this.customWallpapersStorageKey);
+    if (storedCustom) {
+      try {
+        this.customWallpapers = JSON.parse(storedCustom);
+      } catch (e) {
+        this.customWallpapers = [];
+      }
+    }
+
+    this.renderWallpaperOptions(wallpaperOptions);
+    this.applyWallpaper(
+      localStorage.getItem(this.wallpaperStorageKey) || this.defaultWallpaper,
+    );
+
+    const setSelectedTheme = (theme) => {
+      const nextTheme = ["luna", "olive", "silver"].includes(theme)
+        ? theme
+        : "luna";
+      const radio = radios.find((item) => item.value === nextTheme);
+      if (radio) radio.checked = true;
+    };
+
+    const selectedTheme = () =>
+      radios.find((item) => item.checked)?.value || "luna";
+
+    const setSelectedWallpaper = (path) => {
+      const allWallpapers = [...this.wallpapers, ...this.customWallpapers];
+      const nextPath = allWallpapers.some(
+        (wallpaper) => wallpaper.path === path,
+      )
+        ? path
+        : this.defaultWallpaper;
+      const radio = [
+        ...document.querySelectorAll('input[name="xp-wallpaper"]'),
+      ].find((item) => item.value === nextPath);
+      if (radio) radio.checked = true;
+    };
+
+    const selectedWallpaper = () =>
+      document.querySelector('input[name="xp-wallpaper"]:checked')?.value ||
+      this.defaultWallpaper;
+
+    const browseBtn = document.getElementById("wallpaper-browse");
+    const wallpaperInput = document.getElementById("wallpaper-input");
+
+    if (browseBtn && wallpaperInput) {
+      browseBtn.onclick = () => wallpaperInput.click();
+      wallpaperInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const path = event.target.result;
+          const name = file.name.split(".")[0];
+
+          if (this.customWallpapers.some((w) => w.path === path)) return;
+
+          this.customWallpapers.push({ name, path });
+          localStorage.setItem(
+            this.customWallpapersStorageKey,
+            JSON.stringify(this.customWallpapers),
+          );
+
+          this.renderWallpaperOptions(wallpaperOptions);
+          setTimeout(() => setSelectedWallpaper(path), 0);
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
+    const openDisplayProperties = (left, top) => {
+      setSelectedTheme(localStorage.getItem(this.themeStorageKey) || "luna");
+      setSelectedWallpaper(
+        localStorage.getItem(this.wallpaperStorageKey) || this.defaultWallpaper,
+      );
+      windowEl.classList.remove("hidden");
+      windowEl.style.left =
+        Math.max(8, Math.min(left, window.innerWidth - 410)) + "px";
+      windowEl.style.top =
+        Math.max(8, Math.min(top, window.innerHeight - 300)) + "px";
+      windowEl.style.transform = "none";
+    };
+
+    tabBtns.forEach((tabBtn) => {
+      tabBtn.addEventListener("click", () => {
+        const tabName = tabBtn.dataset.displayTab;
+        tabBtns.forEach((btn) => {
+          btn.classList.toggle("active", btn === tabBtn);
+        });
+        panels.forEach((panel) => {
+          panel.classList.toggle(
+            "hidden",
+            panel.dataset.displayPanel !== tabName,
+          );
+        });
+      });
+    });
+
+    desktop.addEventListener("contextmenu", (e) => {
+      const ignoredTarget = e.target.closest(
+        ".shortcut, .xp-window, .start-menu, .taskbar, .xp-search-box",
+      );
+      if (ignoredTarget) return;
+
+      e.preventDefault();
+      document.getElementById("start-menu")?.classList.add("hidden");
+      openDisplayProperties(e.clientX, e.clientY);
+    });
+
+    const close = () => windowEl.classList.add("hidden");
+
+    applyBtn.onclick = () => {
+      const theme = selectedTheme();
+      const wallpaper = selectedWallpaper();
+      localStorage.setItem(this.themeStorageKey, theme);
+      localStorage.setItem(this.wallpaperStorageKey, wallpaper);
+      this.applyTheme(theme);
+      this.applyWallpaper(wallpaper);
+    };
+
+    okBtn.onclick = () => {
+      applyBtn.onclick();
+      close();
+    };
+
+    cancelBtn.onclick = close;
+    closeBtn.onclick = close;
+
+    this.makeWindowDraggable(windowEl);
+  },
+
+  applyTheme(theme) {
+    document.body.classList.remove("theme-olive", "theme-silver");
+    if (theme === "olive") {
+      document.body.classList.add("theme-olive");
+    }
+    if (theme === "silver") {
+      document.body.classList.add("theme-silver");
+    }
+  },
+
+  renderWallpaperOptions(container) {
+    if (!container) return;
+
+    const allWallpapers = [
+      ...this.wallpapers.map((w) => ({ ...w, isDefault: true })),
+      ...this.customWallpapers.map((w) => ({ ...w, isDefault: false })),
+    ];
+
+    container.innerHTML = allWallpapers
+      .map(
+        (wallpaper) => `
+          <label class="wallpaper-option" title="${wallpaper.name}">
+            <input type="radio" name="xp-wallpaper" value="${wallpaper.path}">
+            <img src="${wallpaper.path}" alt="">
+            <span>${wallpaper.name}</span>
+            ${
+              !wallpaper.isDefault
+                ? `<button class="delete-wallpaper" data-path="${wallpaper.path}" title="Delete">X</button>`
+                : ""
+            }
+          </label>
+        `,
+      )
+      .join("");
+
+    container.querySelectorAll(".delete-wallpaper").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const path = btn.dataset.path;
+        if (confirm(`Remove custom wallpaper "${path.substring(0, 20)}..."?`)) {
+          this.customWallpapers = this.customWallpapers.filter(
+            (w) => w.path !== path,
+          );
+          localStorage.setItem(
+            this.customWallpapersStorageKey,
+            JSON.stringify(this.customWallpapers),
+          );
+
+          if (localStorage.getItem(this.wallpaperStorageKey) === path) {
+            localStorage.setItem(
+              this.wallpaperStorageKey,
+              this.defaultWallpaper,
+            );
+            this.applyWallpaper(this.defaultWallpaper);
+          }
+
+          this.renderWallpaperOptions(container);
+        }
+      };
+    });
+  },
+
+  applyWallpaper(path) {
+    const desktop = document.getElementById("desktop");
+    const allWallpapers = [...this.wallpapers, ...this.customWallpapers];
+    const nextPath = allWallpapers.some((wallpaper) => wallpaper.path === path)
+      ? path
+      : this.defaultWallpaper;
+    if (desktop) {
+      desktop.style.backgroundImage = `url("${nextPath}")`;
+    }
+  },
+
   initNotepad() {
     const startItem = document.getElementById("start-notepad");
     const taskBtn = document.getElementById("notepad-task-btn");
@@ -335,7 +593,9 @@ const App = {
 
     viewBtn?.addEventListener("click", updateCaret);
     helpBtn?.addEventListener("click", () => {
-      alert("Windows XP Notepad\n\nYour text is saved locally in this browser.");
+      alert(
+        "Windows XP Notepad\n\nYour text is saved locally in this browser.",
+      );
     });
 
     document.addEventListener("click", (e) => {
@@ -474,7 +734,10 @@ const App = {
 
     const update = () => {
       const taskManagerWindow = document.getElementById("taskmgr-window");
-      if (!taskManagerWindow || taskManagerWindow.classList.contains("hidden")) {
+      if (
+        !taskManagerWindow ||
+        taskManagerWindow.classList.contains("hidden")
+      ) {
         clearInterval(this.monitorInterval);
         this.monitorInterval = null;
         return;

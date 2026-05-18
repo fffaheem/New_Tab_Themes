@@ -1,10 +1,81 @@
 :root {
     --taskbar-h: 30px;
-    --win-blue-d: #245edb;
-    --win-blue-l: #3c81f3;
-    --win-green: #388e3c;
-    --win-tray: #0972e3;
+    --chrome-dark: #245edb;
+    --chrome-mid: #3c81f3;
+    --chrome-light: #27c6ff;
+    --chrome-deep: #1941a5;
+    --chrome-border: #10398b;
+    --window-border: #0054e3;
+    --title-start: #0058ee;
+    --title-mid: #3590ff;
+    --title-end: #0058ee;
+    --title-soft: #288eff;
+    --title-shadow: #127ae0;
+    --start-green: #388e3c;
+    --start-green-light: #4caf50;
+    --start-green-dark: #1b5e20;
+    --tray-start: #0972e3;
+    --tray-end: #0c82f9;
+    --task-hover: #357aec;
+    --task-active: #1e4eb4;
+    --menu-hover: #2f71cd;
+    --start-side-bg: #dbeaf9;
+    --start-side-border: #91b0df;
+    --link-accent: #0054e3;
+    --arrow-color: #388e3c;
     --font: "Tahoma", "Trebuchet MS", sans-serif;
+}
+
+body.theme-olive {
+    --chrome-dark: #6c8c2f;
+    --chrome-mid: #8fab43;
+    --chrome-light: #c7d784;
+    --chrome-deep: #41591f;
+    --chrome-border: #38501b;
+    --window-border: #6d8e2f;
+    --title-start: #5d7f28;
+    --title-mid: #a8bf5a;
+    --title-soft: #9ab24f;
+    --title-shadow: #789832;
+    --title-end: #587523;
+    --tray-start: #6f942e;
+    --tray-end: #8fb23c;
+    --start-green: #6f942e;
+    --start-green-light: #a3bd4f;
+    --start-green-dark: #40591f;
+    --task-hover: #7f9f36;
+    --task-active: #587523;
+    --menu-hover: #6f8f2f;
+    --start-side-bg: #e8efd2;
+    --start-side-border: #a7b96a;
+    --link-accent: #5d7f28;
+    --arrow-color: #6f8f2f;
+}
+
+body.theme-silver {
+    --chrome-dark: #8b94a6;
+    --chrome-mid: #c5cbd8;
+    --chrome-light: #eef1f8;
+    --chrome-deep: #5f687a;
+    --chrome-border: #596272;
+    --window-border: #8d96a8;
+    --title-start: #7f899a;
+    --title-mid: #d9deea;
+    --title-soft: #c4cad8;
+    --title-shadow: #9fa8b8;
+    --title-end: #6f7888;
+    --tray-start: #8f98aa;
+    --tray-end: #c1c7d3;
+    --start-green: #7d8697;
+    --start-green-light: #d0d5df;
+    --start-green-dark: #586171;
+    --task-hover: #a9b1c0;
+    --task-active: #707a8c;
+    --menu-hover: #687ea9;
+    --start-side-bg: #eef0f5;
+    --start-side-border: #b8bec9;
+    --link-accent: #5f687a;
+    --arrow-color: #687ea9;
 }
 
 * {
@@ -24,7 +95,7 @@ html {
 .desktop {
     width: 100%;
     height: 100%;
-    background-image: url("assets/images/wallpaper/windows-xp-wallpaper.jpg");
+    background-image: url("assets/images/wallpaper/Bliss.jpg");
     background-size: cover;
     background-position: center;
     position: relative;
@@ -94,7 +165,7 @@ html {
 
 .xp-search-box {
     background: #ece9d8;
-    border: 2px solid #0054e3;
+    border: 2px solid var(--window-border);
     border-radius: 8px 8px 0 0;
     box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.4);
     width: 400px;
@@ -103,7 +174,11 @@ html {
 }
 
 .xp-search-title {
-    background: linear-gradient(to right, #0054e3 0%, #27c6ff 100%);
+    background: linear-gradient(
+        to right,
+        var(--window-border) 0%,
+        var(--chrome-light) 100%
+    );
     color: white;
     font-weight: bold;
     padding: 5px 10px;
@@ -160,7 +235,7 @@ html {
 .xp-btn-subtle {
     background: transparent;
     border: 1px dashed #7f9db9;
-    color: #0054e3;
+    color: var(--link-accent);
     padding: 4px 12px;
     font-size: 11px;
     cursor: pointer;
@@ -181,27 +256,27 @@ html {
     height: var(--taskbar-h);
     background: linear-gradient(
         to bottom,
-        #245edb 0%,
-        #3c81f3 9%,
-        #245edb 18%,
-        #245edb 92%,
-        #1941a5 100%
+        var(--chrome-dark) 0%,
+        var(--chrome-mid) 9%,
+        var(--chrome-dark) 18%,
+        var(--chrome-dark) 92%,
+        var(--chrome-deep) 100%
     );
     display: flex;
     align-items: center;
     z-index: 1100;
-    border-top: 1px solid #10398b;
+    border-top: 1px solid var(--chrome-border);
 }
 
 .start-button {
     height: 100%;
     background: linear-gradient(
         to bottom,
-        #388e3c 0%,
-        #4caf50 10%,
-        #388e3c 20%,
-        #388e3c 80%,
-        #1b5e20 100%
+        var(--start-green) 0%,
+        var(--start-green-light) 10%,
+        var(--start-green) 20%,
+        var(--start-green) 80%,
+        var(--start-green-dark) 100%
     );
     padding: 0 15px;
     display: flex;
@@ -243,8 +318,12 @@ html {
 .task-item {
     height: 22px;
     width: 160px;
-    background: linear-gradient(to bottom, #3c81f3 0%, #245edb 100%);
-    border: 1px solid #10398b;
+    background: linear-gradient(
+        to bottom,
+        var(--chrome-mid) 0%,
+        var(--chrome-dark) 100%
+    );
+    border: 1px solid var(--chrome-border);
     border-radius: 2px;
     padding: 0 5px;
     display: flex;
@@ -256,11 +335,11 @@ html {
 }
 
 .task-item:hover {
-    background: #357aec;
+    background: var(--task-hover);
 }
 
 .task-item.active {
-    background: #1e4eb4;
+    background: var(--task-active);
     box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.5);
 }
 
@@ -304,8 +383,12 @@ html {
 
 .tray {
     height: 100%;
-    background: linear-gradient(to bottom, #0972e3 0%, #0c82f9 100%);
-    border-left: 1px solid #10398b;
+    background: linear-gradient(
+        to bottom,
+        var(--tray-start) 0%,
+        var(--tray-end) 100%
+    );
+    border-left: 1px solid var(--chrome-border);
     display: flex;
     align-items: center;
     padding: 0 10px;
@@ -337,7 +420,7 @@ html {
 .xp-window {
     position: fixed;
     background: #ece9d8;
-    border: 3px solid #0054e3;
+    border: 3px solid var(--window-border);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     box-shadow: 2px 2px 30px rgba(0, 0, 0, 0.6);
@@ -348,11 +431,11 @@ html {
 .win-titlebar {
     background: linear-gradient(
         to bottom,
-        #0058ee 0%,
-        #3590ff 4%,
-        #288eff 6%,
-        #127ae0 40%,
-        #0058ee 100%
+        var(--title-start) 0%,
+        var(--title-mid) 4%,
+        var(--title-soft) 6%,
+        var(--title-shadow) 40%,
+        var(--title-end) 100%
     );
     height: 28px;
     display: flex;
@@ -518,9 +601,24 @@ html {
     height: 16px;
     cursor: nwse-resize;
     background:
-        linear-gradient(135deg, transparent 0 50%, #aca899 50% 58%, transparent 58%),
-        linear-gradient(135deg, transparent 0 64%, #aca899 64% 72%, transparent 72%),
-        linear-gradient(135deg, transparent 0 78%, #aca899 78% 86%, transparent 86%);
+        linear-gradient(
+            135deg,
+            transparent 0 50%,
+            #aca899 50% 58%,
+            transparent 58%
+        ),
+        linear-gradient(
+            135deg,
+            transparent 0 64%,
+            #aca899 64% 72%,
+            transparent 72%
+        ),
+        linear-gradient(
+            135deg,
+            transparent 0 78%,
+            #aca899 78% 86%,
+            transparent 86%
+        );
 }
 
 .field {
@@ -554,6 +652,184 @@ html {
 
 .xp-btn:hover {
     background: #fff;
+}
+
+/* Display Properties */
+.display-properties {
+    min-width: 360px;
+}
+
+.display-tabs {
+    display: flex;
+    gap: 1px;
+    padding: 8px 8px 0;
+    background: #ece9d8;
+}
+
+.display-tab {
+    padding: 3px 11px;
+    border: 1px solid #919b9c;
+    border-bottom: none;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    background: #d8d2bd;
+    color: #000;
+    font-family: var(--font);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.display-tab.active {
+    background: #ece9d8;
+    position: relative;
+    top: 1px;
+}
+
+.display-panel {
+    margin: 0 8px;
+    padding: 14px 12px;
+    border: 1px solid #919b9c;
+    background: #ece9d8;
+}
+
+.display-help {
+    margin: 0 0 10px;
+    font-size: 12px;
+}
+
+.theme-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.theme-option {
+    display: grid;
+    grid-template-columns: auto 42px 1fr;
+    align-items: center;
+    gap: 9px;
+    padding: 7px;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.theme-option:hover {
+    border-color: #316ac5;
+    background: #fff;
+}
+
+.theme-option strong,
+.theme-option small {
+    display: block;
+}
+
+.theme-option strong {
+    font-size: 12px;
+}
+
+.theme-option small {
+    margin-top: 2px;
+    color: #555;
+    font-size: 11px;
+}
+
+.theme-swatch {
+    width: 42px;
+    height: 24px;
+    border: 1px solid #555;
+    box-shadow: inset 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+.swatch-luna {
+    background: linear-gradient(to right, #245edb 0 65%, #388e3c 65% 100%);
+}
+
+.swatch-olive {
+    background: linear-gradient(to right, #6c8c2f 0 65%, #388e3c 65% 100%);
+}
+
+.swatch-silver {
+    background: linear-gradient(to right, #8b94a6 0 65%, #6f7888 65% 100%);
+}
+
+.display-actions {
+    padding: 10px 8px 8px;
+    margin-top: 0;
+}
+
+.wallpaper-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 3px;
+}
+
+.wallpaper-option {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 11px;
+    position: relative;
+}
+
+.delete-wallpaper {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: linear-gradient(135deg, #f16d4d 0%, #e33e13 100%);
+    color: white;
+    border: 1px solid white;
+    font-size: 9px;
+    cursor: pointer;
+    padding: 0 3px;
+    border-radius: 2px;
+    display: none;
+    z-index: 5;
+    line-height: 12px;
+}
+
+.wallpaper-option:hover .delete-wallpaper {
+    display: block;
+}
+
+.delete-wallpaper:hover {
+    filter: brightness(1.2);
+}
+
+.wallpaper-option:hover {
+    background: #fff;
+    border-color: #316ac5;
+}
+
+.wallpaper-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.wallpaper-option img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border: 1px solid #777;
+    background: #000;
+}
+
+.wallpaper-option span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wallpaper-option:has(input:checked) {
+    background: #316ac5;
+    border-color: #0a246a;
+    color: #fff;
 }
 
 /* Task Manager */
@@ -639,23 +915,23 @@ html {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid #0053e2;
+    border: 1px solid var(--window-border);
 }
 
 .start-header {
     background: linear-gradient(
         to bottom,
-        #0058ee 0%,
-        #3590ff 4%,
-        #288eff 6%,
-        #127ae0 40%,
-        #0058ee 100%
+        var(--title-start) 0%,
+        var(--title-mid) 4%,
+        var(--title-soft) 6%,
+        var(--title-shadow) 40%,
+        var(--title-end) 100%
     );
     padding: 7px 10px;
     display: flex;
     align-items: center;
     color: white;
-    border-bottom: 1px solid #003c74;
+    border-bottom: 1px solid var(--chrome-border);
 }
 
 .start-header .user-icon {
@@ -695,9 +971,9 @@ html {
 
 .start-right {
     width: 50%;
-    background: #dbeaf9;
+    background: var(--start-side-bg);
     padding: 5px;
-    border-left: 1px solid #91b0df;
+    border-left: 1px solid var(--start-side-border);
 }
 
 .start-item,
@@ -714,7 +990,7 @@ html {
 .start-item:hover,
 .start-item-small:hover,
 .start-item-right:hover {
-    background: #2f71cd;
+    background: var(--menu-hover);
     color: white;
 }
 
@@ -764,7 +1040,11 @@ html {
 
 .start-separator-right {
     height: 1px;
-    background: linear-gradient(to right, #91b0df, transparent);
+    background: linear-gradient(
+        to right,
+        var(--start-side-border),
+        transparent
+    );
     margin: 5px 0;
 }
 
@@ -785,7 +1065,7 @@ html {
 }
 
 .all-programs-btn:hover {
-    background: #2f71cd;
+    background: var(--menu-hover);
     color: white;
 }
 
@@ -794,7 +1074,7 @@ html {
     height: 0;
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
-    border-left: 8px solid #388e3c;
+    border-left: 8px solid var(--arrow-color);
     margin-left: 10px;
 }
 

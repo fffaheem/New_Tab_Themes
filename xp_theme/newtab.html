@@ -338,6 +338,126 @@
                 </div>
             </div>
 
+            <div
+                id="display-properties-window"
+                class="xp-window display-properties hidden"
+                style="width: 390px"
+            >
+                <div class="win-titlebar">
+                    <img
+                        src="assets/images/icons/control-panel-icon.webp"
+                        class="win-icon"
+                        alt=""
+                    />
+                    <span>Display Properties</span>
+                    <div class="win-controls">
+                        <button
+                            id="display-close"
+                            class="win-btn btn-close"
+                            type="button"
+                        >
+                            X
+                        </button>
+                    </div>
+                </div>
+                <div class="display-tabs">
+                    <button
+                        class="display-tab active"
+                        data-display-tab="themes"
+                        type="button"
+                    >
+                        Themes
+                    </button>
+                    <button
+                        class="display-tab"
+                        data-display-tab="wallpapers"
+                        type="button"
+                    >
+                        Wallpapers
+                    </button>
+                </div>
+                <div
+                    id="display-themes-panel"
+                    class="display-panel"
+                    data-display-panel="themes"
+                >
+                    <p class="display-help">
+                        Select a Windows XP color scheme:
+                    </p>
+                    <div class="theme-options">
+                        <label class="theme-option">
+                            <input type="radio" name="xp-theme" value="luna" />
+                            <span class="theme-swatch swatch-luna"></span>
+                            <span>
+                                <strong>Luna (Blue)</strong>
+                                <small>The default Windows XP look</small>
+                            </span>
+                        </label>
+                        <label class="theme-option">
+                            <input type="radio" name="xp-theme" value="olive" />
+                            <span class="theme-swatch swatch-olive"></span>
+                            <span>
+                                <strong>Olive Green</strong>
+                                <small>Earthy and retro</small>
+                            </span>
+                        </label>
+                        <label class="theme-option">
+                            <input
+                                type="radio"
+                                name="xp-theme"
+                                value="silver"
+                            />
+                            <span class="theme-swatch swatch-silver"></span>
+                            <span>
+                                <strong>Silver</strong>
+                                <small>Cool and professional</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div
+                    id="display-wallpapers-panel"
+                    class="display-panel hidden"
+                    data-display-panel="wallpapers"
+                >
+                    <p class="display-help">Select a desktop wallpaper:</p>
+                    <div id="wallpaper-options" class="wallpaper-options"></div>
+                    <div
+                        class="wallpaper-actions"
+                        style="
+                            margin-top: 10px;
+                            display: flex;
+                            justify-content: flex-end;
+                        "
+                    >
+                        <button
+                            id="wallpaper-browse"
+                            class="xp-btn"
+                            type="button"
+                        >
+                            Browse...
+                        </button>
+                        <input
+                            type="file"
+                            id="wallpaper-input"
+                            accept="image/*"
+                            class="hidden"
+                        />
+                    </div>
+                </div>
+                <div class="win-actions display-actions">
+                    <button id="display-ok" class="xp-btn" type="button">
+                        OK
+                    </button>
+                    <button id="display-cancel" class="xp-btn" type="button">
+                        Cancel
+                    </button>
+                    <button id="display-apply" class="xp-btn" type="button">
+                        Apply
+                    </button>
+                </div>
+            </div>
+
             <div class="taskbar">
                 <div id="start-btn" class="start-button">
                     <span class="start-text">start</span>
