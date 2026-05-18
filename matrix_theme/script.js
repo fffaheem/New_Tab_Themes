@@ -706,7 +706,9 @@ function deleteBookmark(id) {
         let grp = this_one[0].group;
         saveBookmarksToStorage();
         renderBookmarks();
-        openModalGroup(grp)
+        if ([...bookmarkgroupModal.classList].includes("active")) {
+            openModalGroup(grp)
+        }
     }
 }
 
