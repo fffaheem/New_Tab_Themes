@@ -431,7 +431,7 @@ function renderBookmarks() {
     items.forEach(item => item.remove());
 
     let group_arr = bookmarks.map(gr => gr.group);
-    
+
     let group_distinct = [
         ...new Set(group_arr)
     ].filter(group =>
@@ -515,6 +515,10 @@ function openModalGroup(val){
     }
 
     let grp_arr = bookmarks.filter(g => g.group == val)
+    if(grp_arr.length < 1){
+        closeGroupModal()
+        return;
+    }
     bookmarksContainerGroup.innerHTML = ""
     grp_arr.forEach((bkmrk)=>{
         let id = bkmrk.id;
@@ -690,7 +694,6 @@ function saveBookmark() {
 
     if([... bookmarkgroupModal.classList].includes("active")){
         openModalGroup(prev)
-
     }
 
 }
@@ -698,9 +701,12 @@ function saveBookmark() {
 
 function deleteBookmark(id) {
     if (confirm('Are you sure you want to delete this bookmark?')) {
+        this_one = bookmarks.filter(b => b.id == id);
         bookmarks = bookmarks.filter(b => b.id !== id);
+        let grp = this_one[0].group;
         saveBookmarksToStorage();
         renderBookmarks();
+        openModalGroup(grp)
     }
 }
 
