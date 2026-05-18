@@ -13,7 +13,6 @@ let frameCount = 0;
 let bookmarks = [];
 
 let search_engine = "https://www.google.com/search?q=";
-// let search_engine = "https://search.brave.com/search?q=";
 
 let custom_default =
     [
@@ -21,7 +20,6 @@ let custom_default =
         { id: '2', name: 'YouTube', url: 'https://youtube.com', group: "" },
 
     ];
-
 
 const defaultSettings = {
     themeColor: '#00FF41',
@@ -31,6 +29,43 @@ const defaultSettings = {
     is24HourFormat: true,
     showSeconds: true
 };
+
+function inject(data,d) {
+  let matrix_settings = data.matrix_settings;
+  let matrix_bookmarks = data.matrix_bookmarks;
+  let matrix_search = data.matrix_search;
+  
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ 'matrix_settings': matrix_settings });
+      chrome.storage.local.set({ 'matrix_bookmarks': matrix_bookmarks });
+      chrome.storage.local.set({ 'matrix_search': matrix_search });
+      chrome.storage.local.set({ 'matrix_default': d });
+  } else {
+      localStorage.setItem('matrix_settings', JSON.stringify(matrix_settings));
+      localStorage.setItem('matrix_bookmarks', JSON.stringify(matrix_bookmarks));
+      localStorage.setItem('matrix_search', JSON.stringify(matrix_search));
+      localStorage.setItem('matrix_default', JSON.stringify(d));
+  }
+}
+fetch(chrome.runtime.getURL("config.json"))
+  .then(response => response.json())
+  .then(config => {
+    let data = config;
+    let matrix_search = data.matrix_search;
+    let matrix_default = data.matrix_default;
+    search_engine = matrix_search;
+    if (matrix_default.toLowerCase() == "true") {
+      inject(data,"true");
+      return;
+    }
+    
+    chrome.storage.local.get("matrix_default").then((data) => {
+      const matrixDefault = data.matrix_default ?? "once";
+      if (matrixDefault != "no") {
+        inject(data,"no");
+      }
+    })
+});
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -774,17 +809,6 @@ function modalopenli() {
         })
     })
 }
-
-
-// custom_default =
-// [
-//     { id: '1', name: 'Google', url: 'https://google.com', group: "" },
-//     { id: '2', name: 'YouTube', url: 'https://youtube.com', group: "" }
-// ];
-
-// bookmarks = custom_default;
-// saveBookmarksToStorage();
-
 
 // Start animation
 animate();
