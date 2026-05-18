@@ -91,6 +91,11 @@ canvas {
     color: var(--theme-color);
 }
 
+.reset-control-group {
+    justify-content: center;
+    margin-top: 10px;
+}
+
 .control-group>label {
     min-width: 90px;
     color: var(--theme-color);
@@ -441,6 +446,12 @@ input[type="checkbox"] {
     background-color: rgba(var(--theme-color-rgb), 0.1);
     border-style: solid;
     box-shadow: 0 0 10px rgba(var(--theme-color-rgb), 0.3);
+}
+
+.reset-settings-btn {
+    width: 100%;
+    border-style: solid;
+    padding: 8px;
 }
 
 /* Modal group */
