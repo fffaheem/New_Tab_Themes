@@ -12,6 +12,9 @@ let frameCount = 0;
 
 let bookmarks = [];
 
+let search_engine = "https://www.google.com/search?q=";
+// let search_engine = "https://search.brave.com/search?q=";
+
 let custom_default =
     [
         { id: '1', name: 'Google', url: 'https://google.com', group: "" },
@@ -279,7 +282,7 @@ searchField.addEventListener('keypress', function (e) {
                 window.location.href = url;
             } else {
                 // Search Google
-                window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                window.location.href = search_engine + encodeURIComponent(query);
             }
         }
     }
