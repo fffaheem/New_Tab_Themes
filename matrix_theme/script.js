@@ -1,814 +1,852 @@
-const canvas = document.getElementById('matrixCanvas');
-const ctx = canvas.getContext('2d');
-const digitalClock = document.getElementById('digitalClock');
-const timeFormatToggle = document.getElementById('timeFormatToggle');
-const secondsToggle = document.getElementById('secondsToggle');
-const menuToggle = document.getElementById('menuToggle');
-const matrixControls = document.getElementById('matrixControls');
-const searchField = document.getElementById('passwordField');
-let is24HourFormat = true; // Default to 24-hour format
-let showSeconds = true; // Default to showing seconds
-let frameCount = 0;
+(() => {
+    'use strict';
 
-let bookmarks = [];
+    const STORAGE_KEYS = {
+        settings: 'matrix_settings',
+        bookmarks: 'matrix_bookmarks',
+        search: 'matrix_search',
+        defaults: 'matrix_default'
+    };
 
-let search_engine = "https://www.google.com/search?q=";
+    const DEFAULT_SETTINGS = {
+        themeColor: '#00FF41',
+        backgroundColor: '#000000',
+        animationSpeed: 18,
+        fontSize: 20,
+        is24HourFormat: true,
+        showSeconds: true
+    };
 
-let custom_default =
-    [
-        { id: '1', name: 'Google', url: 'https://google.com', group: "" },
-        { id: '2', name: 'YouTube', url: 'https://youtube.com', group: "" },
-
+    const DEFAULT_BOOKMARKS = [
+        { id: '1', name: 'Google', url: 'https://google.com', group: '' },
+        { id: '2', name: 'YouTube', url: 'https://youtube.com', group: '' }
     ];
 
-const defaultSettings = {
-    themeColor: '#00FF41',
-    backgroundColor: '#000000',
-    animationSpeed: 18,
-    fontSize: 20,
-    is24HourFormat: true,
-    showSeconds: true
-};
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const MONTHS = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+    ];
 
-function inject(data,d) {
-  let matrix_settings = data.matrix_settings;
-  let matrix_bookmarks = data.matrix_bookmarks;
-  let matrix_search = data.matrix_search;
-  
-  if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ 'matrix_settings': matrix_settings });
-      chrome.storage.local.set({ 'matrix_bookmarks': matrix_bookmarks });
-      chrome.storage.local.set({ 'matrix_search': matrix_search });
-      chrome.storage.local.set({ 'matrix_default': d });
-  } else {
-      localStorage.setItem('matrix_settings', JSON.stringify(matrix_settings));
-      localStorage.setItem('matrix_bookmarks', JSON.stringify(matrix_bookmarks));
-      localStorage.setItem('matrix_search', JSON.stringify(matrix_search));
-      localStorage.setItem('matrix_default', JSON.stringify(d));
-  }
-}
-fetch(chrome.runtime.getURL("config.json"))
-  .then(response => response.json())
-  .then(config => {
-    let data = config;
-    let matrix_search = data.matrix_search;
-    let matrix_default = data.matrix_default;
-    search_engine = matrix_search;
-    if (matrix_default.toLowerCase() == "true") {
-      inject(data,"true");
-      return;
+    const CHARACTERS =
+        '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_-+=/?.,<>~ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ';
+    const CHARACTER_LIST = [...CHARACTERS];
+    const URL_PATTERN = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-.\/?%&=]*)?$/i;
+
+    const elements = {
+        canvas: document.getElementById('matrixCanvas'),
+        digitalClock: document.getElementById('digitalClock'),
+        timeFormatToggle: document.getElementById('timeFormatToggle'),
+        secondsToggle: document.getElementById('secondsToggle'),
+        menuToggle: document.getElementById('menuToggle'),
+        matrixControls: document.getElementById('matrixControls'),
+        searchField: document.getElementById('passwordField'),
+        colorPicker: document.getElementById('colorPicker'),
+        bgColorPicker: document.getElementById('bgColorPicker'),
+        speedSlider: document.getElementById('speedSlider'),
+        fontSizeSlider: document.getElementById('fontSizeSlider'),
+        speedValue: document.getElementById('speedValue'),
+        fontSizeValue: document.getElementById('fontSizeValue'),
+        resetSettingsBtn: document.getElementById('resetSettingsBtn'),
+        bookmarksContainer: document.getElementById('bookmarksContainer'),
+        bookmarksContainerGroup: document.getElementById('bookmarksContainerGroup'),
+        addBookmarkBtn: document.getElementById('addBookmarkBtn'),
+        bookmarkModal: document.getElementById('bookmarkModal'),
+        bookmarkGroupModal: document.getElementById('bookmarkgroupModal'),
+        cancelBookmarkBtn: document.getElementById('cancelBookmarkBtn'),
+        cancelBookmarkGroupBtn: document.getElementById('cancelBookmarkGroupBtn'),
+        saveBookmarkBtn: document.getElementById('saveBookmarkBtn'),
+        saveBookmarkGroupBtn: document.getElementById('saveBookmarkGroupBtn'),
+        bookmarkIdInput: document.getElementById('bookmarkId'),
+        bookmarkNameInput: document.getElementById('bookmarkName'),
+        bookmarkUrlInput: document.getElementById('bookmarkUrl'),
+        modalTitle: document.getElementById('modalTitle'),
+        groupNameInput: document.getElementById('groupName'),
+        groupNameModal: document.getElementById('groupNameModal'),
+        groupBookmarkBtn: document.getElementById('groupBookmarkBtn'),
+        groupSelect: document.getElementById('modalselect'),
+        deleteBookmarkGroupBtn: document.getElementById('deleteBookmarkGroupBtn')           ,
+        deletegroupModal: document.getElementById('deletegroupModal'),
+        cancelGroupBtnDelete: document.getElementById('cancelGroupBtnDelete'),
+        deleteGrpOnly: document.getElementById('deleteGrpOnly'),
+        deleteGrpAll: document.getElementById('deleteGrpAll'),
+    };
+
+    const context = elements.canvas.getContext('2d');
+    const groupIcon = elements.groupBookmarkBtn.querySelector('i');
+    const faviconCanvas = document.createElement('canvas');
+    const faviconContext = faviconCanvas.getContext('2d');
+
+    const state = {
+        settings: { ...DEFAULT_SETTINGS },
+        bookmarks: cloneBookmarks(DEFAULT_BOOKMARKS),
+        searchEngine: 'https://www.google.com/search?q=',
+        rainColor: DEFAULT_SETTINGS.themeColor,
+        backgroundColor: DEFAULT_SETTINGS.backgroundColor,
+        backgroundColorRgb: '0, 0, 0',
+        columns: 0,
+        drops: [],
+        frameCount: 0,
+        clockTimeout: null
+    };
+
+    let resizeFrame = null;
+
+    function cloneBookmarks(bookmarks) {
+        return bookmarks.map((bookmark) => ({ ...bookmark }));
     }
-    
-    chrome.storage.local.get("matrix_default").then((data) => {
-      const matrixDefault = data.matrix_default ?? "once";
-      if (matrixDefault != "no") {
-        inject(data,"no");
-      }
-    })
-});
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-// --- Configuration ---
-let rainColor = '#00FF41'; // Initial color for matrix rain
-let uiThemeColor = rainColor; // Initial color for UI elements
-
-let fontSize = 20;
-let animationSpeed = 18;
-
-const characters = `123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_-+=/?.,<>~ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ`;
-const charArray = characters.split('');
-
-let columns = Math.ceil(canvas.width / fontSize);
-let drops = Array(columns).fill(1);
-
-// --- Helper to convert hex to RGB for CSS variables with opacity ---
-function hexToRgb(hex) {
-    let r = 0, g = 0, b = 0;
-    if (hex.length == 4) { // #RGB
-        r = parseInt(hex[1] + hex[1], 16);
-        g = parseInt(hex[2] + hex[2], 16);
-        b = parseInt(hex[3] + hex[3], 16);
-    } else if (hex.length == 7) { // #RRGGBB
-        r = parseInt(hex[1] + hex[2], 16);
-        g = parseInt(hex[3] + hex[4], 16);
-        b = parseInt(hex[5] + hex[6], 16);
+    function hasChromeStorage() {
+        return typeof chrome !== 'undefined' && Boolean(chrome.storage?.local);
     }
-    return `${r}, ${g}, ${b}`;
-}
 
-function updateThemeColors(newColor) {
-    rainColor = newColor; // For matrix rain itself
-    uiThemeColor = newColor; // For UI elements
-    document.documentElement.style.setProperty('--theme-color', uiThemeColor);
-    document.documentElement.style.setProperty('--theme-color-rgb', hexToRgb(uiThemeColor));
-}
+    function hasChromeRuntime() {
+        return typeof chrome !== 'undefined' && Boolean(chrome.runtime?.getURL);
+    }
 
-let bgColor = '#000000';
-let bgColorRGB = '0, 0, 0';
-
-function updateBackgroundColor(newColor) {
-    bgColor = newColor;
-    bgColorRGB = hexToRgb(newColor);
-    document.documentElement.style.setProperty('--bg-color', newColor);
-    document.documentElement.style.setProperty('--bg-color-rgb', bgColorRGB);
-}
-
-
-// --- Control Elements ---
-const colorPicker = document.getElementById('colorPicker');
-const bgColorPicker = document.getElementById('bgColorPicker');
-const speedSlider = document.getElementById('speedSlider');
-const fontSizeSlider = document.getElementById('fontSizeSlider');
-const speedValueSpan = document.getElementById('speedValue');
-const fontSizeValueSpan = document.getElementById('fontSizeValue');
-
-// --- Initialize Controls and Theme ---
-updateThemeColors(colorPicker.value); // Initialize theme with picker's default value
-if (bgColorPicker) {
-    updateBackgroundColor(bgColorPicker.value);
-}
-speedSlider.value = animationSpeed;
-speedValueSpan.textContent = animationSpeed;
-fontSizeSlider.value = fontSize;
-fontSizeValueSpan.textContent = fontSize;
-
-
-// --- Control Event Listeners ---
-colorPicker.addEventListener('input', (event) => {
-    updateThemeColors(event.target.value);
-    updateFavicon(event.target.value);
-});
-colorPicker.addEventListener('change', (event) => {
-    settings.themeColor = event.target.value;
-    saveSettingsToStorage();
-    updateFavicon(event.target.value);
-});
-
-if (bgColorPicker) {
-    bgColorPicker.addEventListener('input', (event) => {
-        updateBackgroundColor(event.target.value);
-    });
-    bgColorPicker.addEventListener('change', (event) => {
-        settings.backgroundColor = event.target.value;
-        saveSettingsToStorage();
-    });
-}
-
-speedSlider.addEventListener('input', (event) => {
-    animationSpeed = parseInt(event.target.value, 10);
-    speedValueSpan.textContent = animationSpeed;
-});
-speedSlider.addEventListener('change', (event) => {
-    settings.animationSpeed = animationSpeed;
-    saveSettingsToStorage();
-});
-
-fontSizeSlider.addEventListener('input', (event) => {
-    fontSize = parseInt(event.target.value, 10);
-    fontSizeValueSpan.textContent = fontSize;
-    columns = Math.ceil(canvas.width / fontSize);
-    drops = Array(columns).fill(1);
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-});
-fontSizeSlider.addEventListener('change', (event) => {
-    settings.fontSize = fontSize;
-    saveSettingsToStorage();
-});
-
-const resetSettingsBtn = document.getElementById('resetSettingsBtn');
-if (resetSettingsBtn) {
-    resetSettingsBtn.addEventListener('click', () => {
-        settings = { ...defaultSettings };
-        saveSettingsToStorage();
-        applySettings();
-    });
-}
-
-function drawMatrix() {
-    ctx.fillStyle = `rgba(${bgColorRGB}, 0.05)`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.font = `${fontSize}px 'Courier New', Courier, monospace`;
-
-    for (let i = 0; i < drops.length; i++) {
-        const x = i * fontSize;
-        const y = drops[i] * fontSize;
-
-        ctx.fillStyle = `rgba(${bgColorRGB}, 0.7)`;
-        ctx.fillRect(x, y, fontSize, fontSize);
-
-        if (y >= 0) {
-            ctx.fillStyle = rainColor;
-            const text = charArray[Math.floor(Math.random() * charArray.length)];
-            ctx.fillText(text, x, y);
+    function parseStoredValue(value) {
+        if (value === null || value === undefined) {
+            return undefined;
         }
 
-        if (y > canvas.height) {
-            if (Math.random() > 0.975) {
-                drops[i] = -Math.floor(Math.random() * 10);
-            }
-        }
-        drops[i]++;
-    }
-}
-
-
-function animate() {
-    frameCount++;
-    if (frameCount % (21 - animationSpeed) === 0) {
-        drawMatrix();
-    }
-    requestAnimationFrame(animate);
-}
-
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    columns = Math.ceil(canvas.width / fontSize);
-    drops = Array(columns).fill(1);
-    if (ctx) { // Ensure ctx is available
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-});
-
-let clockTimeout;
-
-function updateClock() {
-    const now = new Date();
-    let hours = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    let period = '';
-
-    if (!is24HourFormat) {
-        period = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
-    }
-
-    const formattedHours = String(hours).padStart(2, '0');
-    let timeString = '';
-    if (is24HourFormat) {
-        timeString = showSeconds ? `${formattedHours}:${minutes}:${seconds}` : `${formattedHours}:${minutes}`;
-    } else {
-        timeString = showSeconds ? `${formattedHours}:${minutes}:${seconds} ${period}` : `${formattedHours}:${minutes} ${period}`;
-    }
-
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const dateString = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} ${days[now.getDay()]}`;
-
-    digitalClock.innerHTML = `
-        <div class="time-string">${timeString}</div>
-        <div class="date-string">${dateString}</div>
-    `;
-
-    // Schedule next update precisely
-    if (clockTimeout) clearTimeout(clockTimeout);
-
-    let delay;
-    if (showSeconds) {
-        delay = 1000 - now.getMilliseconds();
-    } else {
-        delay = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-    }
-    // Prevent 0 or negative delays
-    if (delay <= 0) delay = showSeconds ? 1000 : 60000;
-
-    clockTimeout = setTimeout(updateClock, delay);
-}
-
-updateClock(); // Initial call to display clock immediately
-
-timeFormatToggle.addEventListener('change', (e) => {
-    is24HourFormat = !e.target.checked;
-    settings.is24HourFormat = is24HourFormat;
-    saveSettingsToStorage();
-    updateClock();
-});
-
-secondsToggle.addEventListener('change', (e) => {
-    showSeconds = e.target.checked;
-    settings.showSeconds = showSeconds;
-    saveSettingsToStorage();
-    updateClock();
-});
-
-menuToggle.addEventListener('click', () => {
-    matrixControls.classList.toggle('hidden');
-});
-
-// Search / URL navigation functionality
-searchField.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        const query = this.value.trim();
-        if (query) {
-            // Check if it's a URL
-            const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-.\/?%&=]*)?$/i;
-            if (urlPattern.test(query) && !query.includes(' ')) {
-                let url = query;
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    url = 'https://' + url;
-                }
-                window.location.href = url;
-            } else {
-                // Search Google
-                window.location.href = search_engine + encodeURIComponent(query);
-            }
-        }
-    }
-});
-
-// Bookmark Functionality
-const bookmarksContainer = document.getElementById('bookmarksContainer');
-const bookmarksContainerGroup = document.getElementById('bookmarksContainerGroup');
-const addBookmarkBtn = document.getElementById('addBookmarkBtn');
-const bookmarkModal = document.getElementById('bookmarkModal');
-const bookmarkgroupModal = document.getElementById('bookmarkgroupModal');
-const cancelBookmarkBtn = document.getElementById('cancelBookmarkBtn');
-const cancelBookmarkGroupBtn = document.getElementById('cancelBookmarkGroupBtn');
-const saveBookmarkBtn = document.getElementById('saveBookmarkBtn');
-const bookmarkIdInput = document.getElementById('bookmarkId');
-const bookmarkNameInput = document.getElementById('bookmarkName');
-const bookmarkUrlInput = document.getElementById('bookmarkUrl');
-const modalTitle = document.getElementById('modalTitle');
-
-let modalgroupout = document.getElementById("modalgroupout")
-let groupName = modalgroupout.querySelector("#groupName")
-let groupBookmarkBtn = modalgroupout.querySelector("#groupBookmarkBtn")
-let groupicon = modalgroupout.querySelector("i");
-let modalselect = modalgroupout.querySelector("#modalselect")
-
-let settings = { ...defaultSettings };
-
-function saveSettingsToStorage() {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set({ 'matrix_settings': settings });
-    } else {
-        localStorage.setItem('matrix_settings', JSON.stringify(settings));
-    }
-}
-
-function saveBookmarksToStorage() {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set({ 'matrix_bookmarks': bookmarks });
-    } else {
-        localStorage.setItem('matrix_bookmarks', JSON.stringify(bookmarks));
-    }
-}
-
-function updateFavicon(color) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 32;
-    const ctx = canvas.getContext('2d');
-
-    // Clear canvas
-    ctx.clearRect(0, 0, 32, 32);
-
-    // Draw the terminal icon
-    ctx.fillStyle = color;
-    ctx.font = '900 24px "Font Awesome 6 Free"';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('\uf120', 16, 16); // \uf120 is fa-terminal
-
-    // Update Tab Favicon
-    const dataUrl = canvas.toDataURL('image/png');
-    let link = document.getElementById('dynamic-favicon');
-    if (!link) {
-        link = document.createElement('link');
-        link.id = 'dynamic-favicon';
-        link.rel = 'icon';
-        link.type = 'image/png';
-        document.head.appendChild(link);
-    }
-    link.href = dataUrl;
-
-    // Update Extension Icon
-    if (typeof chrome !== 'undefined' && chrome.action && chrome.action.setIcon) {
         try {
-            const imageData = ctx.getImageData(0, 0, 32, 32);
-            chrome.action.setIcon({ imageData: imageData });
-        } catch (e) {
-            console.error('Could not set extension icon', e);
+            return JSON.parse(value);
+        } catch {
+            return value;
         }
     }
-}
 
-function applySettings() {
-    animationSpeed = settings.animationSpeed;
-    fontSize = settings.fontSize;
-    is24HourFormat = settings.is24HourFormat;
-    showSeconds = settings.showSeconds;
+    async function readStorage(keys) {
+        if (hasChromeStorage()) {
+            return chrome.storage.local.get(keys);
+        }
 
-    // Update UI controls
-    colorPicker.value = settings.themeColor;
-    updateThemeColors(settings.themeColor);
-
-    if (bgColorPicker) {
-        bgColorPicker.value = settings.backgroundColor || '#000000';
-        updateBackgroundColor(bgColorPicker.value);
+        return keys.reduce((storedValues, key) => {
+            storedValues[key] = parseStoredValue(localStorage.getItem(key));
+            return storedValues;
+        }, {});
     }
 
-    // Wait for fonts to load before drawing favicon
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => updateFavicon(settings.themeColor));
-    } else {
-        updateFavicon(settings.themeColor);
-    }
+    async function writeStorage(values) {
+        if (hasChromeStorage()) {
+            await chrome.storage.local.set(values);
+            return;
+        }
 
-    speedSlider.value = settings.animationSpeed;
-    speedValueSpan.textContent = settings.animationSpeed;
-
-    fontSizeSlider.value = settings.fontSize;
-    fontSizeValueSpan.textContent = settings.fontSize;
-
-    timeFormatToggle.checked = !settings.is24HourFormat;
-    secondsToggle.checked = settings.showSeconds;
-
-    columns = Math.ceil(canvas.width / fontSize);
-    drops = Array(columns).fill(1);
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    updateClock();
-}
-
-function loadDataFromStorage(callback) {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['matrix_bookmarks', 'matrix_settings'], function (result) {
-            if (result.matrix_bookmarks) {
-                bookmarks = result.matrix_bookmarks;
-            } else {
-                bookmarks = custom_default;
-            }
-            if (result.matrix_settings) {
-                settings = result.matrix_settings;
-            }
-            callback();
+        Object.entries(values).forEach(([key, value]) => {
+            localStorage.setItem(key, JSON.stringify(value));
         });
-    } else {
-        bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
-        const savedSettings = JSON.parse(localStorage.getItem('matrix_settings'));
-        if (savedSettings) {
-            settings = savedSettings;
-        }
-        callback();
     }
-}
 
-function renderBookmarks() {
-    // Clear existing bookmarks
-    // return
-    const items = bookmarksContainer.querySelectorAll('.bookmark-item');
-    items.forEach(item => item.remove());
+    async function loadConfigDefaults() {
+        try {
+            const configUrl = hasChromeRuntime() ? chrome.runtime.getURL('config.json') : 'config.json';
+            const response = await fetch(configUrl);
+            const config = await response.json();
+            const defaultMode = String(config.matrix_default ?? '').toLowerCase();
 
-    let group_arr = bookmarks.map(gr => gr.group);
+            state.searchEngine = config.matrix_search || state.searchEngine;
 
-    let group_distinct = [
-        ...new Set(group_arr)
-    ].filter(group =>
-        group &&
-        group.toLowerCase() !== "none" &&
-        group.toLowerCase() !== "null"
-    );
+            if (defaultMode === 'true') {
+                await injectConfig(config, 'true');
+                return;
+            }
 
+            const stored = await readStorage([STORAGE_KEYS.defaults]);
+            const storedDefaultMode = stored[STORAGE_KEYS.defaults] ?? 'once';
 
-    bookmarks.forEach(bookmark => {
-        let n = bookmark.name;
-        let url = bookmark.url;
-        let id = bookmark.id;
-        let group = bookmark.group;
-        if (group.toLowerCase() == "none" || group.toLowerCase() == "" || group.toLowerCase() == "null") {
-            let a = document.createElement('a');
-            a.href = url;
-            a.className = 'bookmark-item';
-            a.innerHTML = `
-                <i class="fas fa-globe favicon"></i>
-                <span>${n}</span>
-                <div class="bookmark-actions">
-                    <button class="edit-btn" data-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="delete-btn" data-id="${id}" title="Delete"><i class="fas fa-trash"></i></button>
-                </div>
-            `;
-            bookmarksContainer.append(a);
+            if (storedDefaultMode !== 'no') {
+                await injectConfig(config, 'no');
+            }
+        } catch (error) {
+            console.error('Unable to load Matrix config.', error);
         }
-    });
+    }
 
-    group_distinct.forEach(grp=>{
-        let div = document.createElement('div');
-        div.className = 'bookmark-item open-folder';
-        div.dataset.value = grp
-        div.innerHTML = `
-            <i class="fa fa-folder" aria-hidden="true"></i>
-            <span>${grp}</span>
+    function injectConfig(config, defaultMode) {
+        return writeStorage({
+            [STORAGE_KEYS.settings]: config.matrix_settings,
+            [STORAGE_KEYS.bookmarks]: config.matrix_bookmarks,
+            [STORAGE_KEYS.search]: config.matrix_search,
+            [STORAGE_KEYS.defaults]: defaultMode
+        });
+    }
+
+    async function loadDataFromStorage() {
+        const stored = await readStorage([STORAGE_KEYS.bookmarks, STORAGE_KEYS.settings]);
+
+        state.bookmarks = Array.isArray(stored[STORAGE_KEYS.bookmarks])
+            ? stored[STORAGE_KEYS.bookmarks]
+            : cloneBookmarks(DEFAULT_BOOKMARKS);
+
+        state.settings = {
+            ...DEFAULT_SETTINGS,
+            ...(stored[STORAGE_KEYS.settings] || {})
+        };
+    }
+
+    function saveSettingsToStorage() {
+        writeStorage({ [STORAGE_KEYS.settings]: state.settings });
+    }
+
+    function saveBookmarksToStorage() {
+        writeStorage({ [STORAGE_KEYS.bookmarks]: state.bookmarks });
+    }
+
+    function hexToRgb(hex) {
+        if (hex.length === 4) {
+            const [r, g, b] = [hex[1], hex[2], hex[3]].map((value) => parseInt(value + value, 16));
+            return `${r}, ${g}, ${b}`;
+        }
+
+        if (hex.length === 7) {
+            const [r, g, b] = [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map((value) =>
+                parseInt(value, 16)
+            );
+            return `${r}, ${g}, ${b}`;
+        }
+
+        return '0, 0, 0';
+    }
+
+    function updateThemeColor(color) {
+        state.rainColor = color;
+        document.documentElement.style.setProperty('--theme-color', color);
+        document.documentElement.style.setProperty('--theme-color-rgb', hexToRgb(color));
+    }
+
+    function updateBackgroundColor(color) {
+        state.backgroundColor = color;
+        state.backgroundColorRgb = hexToRgb(color);
+        document.documentElement.style.setProperty('--bg-color', color);
+        document.documentElement.style.setProperty('--bg-color-rgb', state.backgroundColorRgb);
+    }
+
+    function resetRain() {
+        state.columns = Math.ceil(elements.canvas.width / state.settings.fontSize);
+        state.drops = Array(state.columns).fill(1);
+    }
+
+    function clearCanvas() {
+        context.fillStyle = state.backgroundColor;
+        context.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+    }
+
+    function resizeCanvas() {
+        elements.canvas.width = window.innerWidth;
+        elements.canvas.height = window.innerHeight;
+        resetRain();
+        clearCanvas();
+    }
+
+    function drawMatrix() {
+        const { backgroundColorRgb, rainColor, drops } = state;
+        const { fontSize } = state.settings;
+
+        context.fillStyle = `rgba(${backgroundColorRgb}, 0.05)`;
+        context.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+        context.font = `${fontSize}px 'Courier New', Courier, monospace`;
+
+        for (let index = 0; index < drops.length; index += 1) {
+            const x = index * fontSize;
+            const y = drops[index] * fontSize;
+
+            context.fillStyle = `rgba(${backgroundColorRgb}, 0.7)`;
+            context.fillRect(x, y, fontSize, fontSize);
+
+            if (y >= 0) {
+                context.fillStyle = rainColor;
+                context.fillText(CHARACTER_LIST[Math.floor(Math.random() * CHARACTER_LIST.length)], x, y);
+            }
+
+            if (y > elements.canvas.height && Math.random() > 0.975) {
+                drops[index] = -Math.floor(Math.random() * 10);
+            }
+
+            drops[index] += 1;
+        }
+    }
+
+    function animate() {
+        state.frameCount += 1;
+
+        if (state.frameCount % (21 - state.settings.animationSpeed) === 0) {
+            drawMatrix();
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    function updateClock() {
+        const now = new Date();
+        let hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        let period = '';
+
+        if (!state.settings.is24HourFormat) {
+            period = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+        }
+
+        const formattedHours = String(hours).padStart(2, '0');
+        const baseTime = state.settings.showSeconds
+            ? `${formattedHours}:${minutes}:${seconds}`
+            : `${formattedHours}:${minutes}`;
+        const timeString = state.settings.is24HourFormat ? baseTime : `${baseTime} ${period}`;
+        const dateString = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()} ${DAYS[now.getDay()]}`;
+
+        elements.digitalClock.innerHTML = `
+            <div class="time-string">${timeString}</div>
+            <div class="date-string">${dateString}</div>
         `;
-        bookmarksContainer.append(div);
-    })
 
-    // Add event listeners for folder buttons
-    document.querySelectorAll('.open-folder').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent navigating
-            e.stopPropagation();
-            openModalGroup(e.currentTarget.dataset.value);
-        });
-    });
+        if (state.clockTimeout) {
+            clearTimeout(state.clockTimeout);
+        }
 
-    // Add event listeners for edit/delete buttons
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent navigating
-            e.stopPropagation();
-            openModal(e.currentTarget.getAttribute('data-id'));
-        });
-    });
+        let delay = state.settings.showSeconds
+            ? 1000 - now.getMilliseconds()
+            : (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent navigating
-            e.stopPropagation();
-            deleteBookmark(e.currentTarget.getAttribute('data-id'));
-        });
-    });
-}
+        if (delay <= 0) {
+            delay = state.settings.showSeconds ? 1000 : 60000;
+        }
 
-function openModalGroup(val){
-    bookmarkgroupModal.classList.add('active');
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get('matrix_bookmarks').then(result => {
-            if (result.matrix_bookmarks) {
-                bookmarks = result.matrix_bookmarks;
-            } else {
-                bookmarks = custom_default;
+        state.clockTimeout = setTimeout(updateClock, delay);
+    }
+
+    function updateFavicon(color) {
+        faviconCanvas.width = 32;
+        faviconCanvas.height = 32;
+        faviconContext.clearRect(0, 0, 32, 32);
+        faviconContext.fillStyle = color;
+        faviconContext.font = '900 24px "Font Awesome 6 Free"';
+        faviconContext.textAlign = 'center';
+        faviconContext.textBaseline = 'middle';
+        faviconContext.fillText('\uf120', 16, 16);
+
+        let link = document.getElementById('dynamic-favicon');
+        if (!link) {
+            link = document.createElement('link');
+            link.id = 'dynamic-favicon';
+            link.rel = 'icon';
+            link.type = 'image/png';
+            document.head.appendChild(link);
+        }
+        link.href = faviconCanvas.toDataURL('image/png');
+
+        if (typeof chrome !== 'undefined' && chrome.action?.setIcon) {
+            try {
+                chrome.action.setIcon({ imageData: faviconContext.getImageData(0, 0, 32, 32) });
+            } catch (error) {
+                console.error('Could not set extension icon.', error);
             }
-        })
-    }else{
-        bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
+        }
     }
 
-    let grp_arr = bookmarks.filter(g => g.group == val)
-    if(grp_arr.length < 1){
-        closeGroupModal()
-        return;
-    }
-    bookmarksContainerGroup.innerHTML = ""
-    grp_arr.forEach((bkmrk)=>{
-        let id = bkmrk.id;
-        let name = bkmrk.name;
-        let url = bkmrk.url;
-        let grp = bkmrk.group;
+    function applySettings() {
+        const { settings } = state;
 
-        let a = document.createElement('a');
-        a.href = url;
-        a.className = 'bookmark-item';
-        a.innerHTML = `
-            <i class="fas fa-globe favicon"></i>
-            <span>${name}</span>
-            <div class="bookmark-actions">
-                <button class="edit-btn" data-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                <button class="delete-btn" data-id="${id}" title="Delete"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
+        elements.colorPicker.value = settings.themeColor;
+        elements.speedSlider.value = settings.animationSpeed;
+        elements.speedValue.textContent = settings.animationSpeed;
+        elements.fontSizeSlider.value = settings.fontSize;
+        elements.fontSizeValue.textContent = settings.fontSize;
+        elements.timeFormatToggle.checked = !settings.is24HourFormat;
+        elements.secondsToggle.checked = settings.showSeconds;
 
-        bookmarksContainerGroup.append(a);
+        updateThemeColor(settings.themeColor);
 
+        if (elements.bgColorPicker) {
+            elements.bgColorPicker.value = settings.backgroundColor || DEFAULT_SETTINGS.backgroundColor;
+            updateBackgroundColor(elements.bgColorPicker.value);
+        }
 
-    })
+        resetRain();
+        clearCanvas();
+        updateClock();
 
-    groupNameModal.dataset.value = val;
-    groupNameModal.value = val;
-    bookmarkgroupModal.classList.add('active');
-
-    // Add event listeners for edit
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent navigating
-            e.stopPropagation();
-            openModal(e.currentTarget.getAttribute('data-id'));
-        });
-    });
-
-    // Add event listeners for delete buttons
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent navigating
-            e.stopPropagation();
-            deleteBookmark(e.currentTarget.getAttribute('data-id'));
-        });
-    });
-}
-
-function openModal(id = null) {
-    if (id) {
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.get('matrix_bookmarks').then(result => {
-                if (result.matrix_bookmarks) {
-                    bookmarks = result.matrix_bookmarks;
-                } else {
-                    bookmarks = custom_default;
-                }
-            })
+        if (document.fonts?.ready) {
+            document.fonts.ready.then(() => updateFavicon(settings.themeColor));
         } else {
-            bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
+            updateFavicon(settings.themeColor);
         }
-        const bookmark = bookmarks.find(b => b.id === id);
-        if (bookmark) {
-            bookmarkIdInput.value = bookmark.id;
-            bookmarkNameInput.value = bookmark.name;
-            bookmarkUrlInput.value = bookmark.url;
-            groupName.dataset.value = bookmark.group;
-            groupName.value = bookmark.group;
-            if (groupName.value.toLowerCase() != "none" && groupName.value.toLowerCase() != "" && groupName.value.toLowerCase() != "null") {
-                groupName.disabled = true;
-                groupName.style.opacity = 0.5;
-            } else {
-                groupName.style.opacity = 1;
-                groupName.disabled = false;
-            }
-            modalTitle.textContent = 'Edit Bookmark';
-        }
-    } else {
-        bookmarkIdInput.value = '';
-        bookmarkNameInput.value = '';
-        bookmarkUrlInput.value = '';
-        groupName.dataset.value = '';
-        groupName.value = '';
-        modalTitle.textContent = 'Add Bookmark';
     }
 
-    let matrix_bookmarks_arr = bookmarks.map(a => a.group)
-    matrix_bookmarks_set = new Set(matrix_bookmarks_arr);
-    matrix_bookmarks_arr = [...matrix_bookmarks_set]
-    let listr = "<li data-value='none'>None</li> "
-    matrix_bookmarks_arr.forEach(data => {
-        if (data.toLowerCase() == "none" || data.toLowerCase() == "" || data.toLowerCase() == "null") {
+    function normalizeGroup(group) {
+        return String(group ?? '').trim();
+    }
+
+    function isUngrouped(group) {
+        const normalized = normalizeGroup(group).toLowerCase();
+        return !normalized || normalized === 'none' || normalized === 'null';
+    }
+
+    function getDistinctGroups() {
+        return [...new Set(state.bookmarks.map(({ group }) => normalizeGroup(group)).filter((group) => !isUngrouped(group)))];
+    }
+
+    function createBookmarkElement(bookmark) {
+        const link = document.createElement('a');
+        const icon = document.createElement('i');
+        const label = document.createElement('span');
+        const actions = document.createElement('div');
+        const editButton = document.createElement('button');
+        const deleteButton = document.createElement('button');
+
+        link.href = bookmark.url;
+        link.className = 'bookmark-item';
+
+        icon.className = 'fas fa-globe favicon';
+        label.textContent = bookmark.name;
+
+        actions.className = 'bookmark-actions';
+
+        editButton.className = 'edit-btn';
+        editButton.dataset.id = bookmark.id;
+        editButton.title = 'Edit';
+        editButton.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+
+        deleteButton.className = 'delete-btn';
+        deleteButton.dataset.id = bookmark.id;
+        deleteButton.title = 'Delete';
+        deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+
+        actions.append(editButton, deleteButton);
+        link.append(icon, label, actions);
+        return link;
+    }
+
+    function createGroupElement(group) {
+        const folder = document.createElement('div');
+        const icon = document.createElement('i');
+        const label = document.createElement('span');
+
+        folder.className = 'bookmark-item open-folder';
+        folder.dataset.value = group;
+
+        icon.className = 'fa fa-folder';
+        icon.setAttribute('aria-hidden', 'true');
+        label.textContent = group;
+
+        folder.append(icon, label);
+        return folder;
+    }
+
+    function renderBookmarks() {
+        const fragment = document.createDocumentFragment();
+
+        state.bookmarks.filter(({ group }) => isUngrouped(group)).forEach((bookmark) => {
+            fragment.appendChild(createBookmarkElement(bookmark));
+        });
+
+        getDistinctGroups().forEach((group) => {
+            fragment.appendChild(createGroupElement(group));
+        });
+
+        elements.bookmarksContainer.replaceChildren(fragment);
+    }
+
+    function renderGroupBookmarks(group) {
+        const groupedBookmarks = state.bookmarks.filter((bookmark) => bookmark.group === group);
+
+        if (!groupedBookmarks.length) {
+            closeGroupModal();
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        groupedBookmarks.forEach((bookmark) => fragment.appendChild(createBookmarkElement(bookmark)));
+        elements.deleteBookmarkGroupBtn.dataset.value = group;
+        elements.groupNameModal.dataset.value = group;
+        elements.groupNameModal.value = group;
+        elements.bookmarksContainerGroup.replaceChildren(fragment);
+        elements.bookmarkGroupModal.classList.add('active');
+    }
+
+    function renderGroupOptions() {
+        const fragment = document.createDocumentFragment();
+        const emptyOption = document.createElement('li');
+        emptyOption.dataset.value = 'none';
+        emptyOption.textContent = 'None';
+        fragment.appendChild(emptyOption);
+
+        getDistinctGroups().forEach((group) => {
+            const option = document.createElement('li');
+            option.dataset.value = group;
+            option.textContent = group;
+            fragment.appendChild(option);
+        });
+
+        elements.groupSelect.replaceChildren(fragment);
+    }
+
+    function setGroupInputState(group) {
+        const normalizedGroup = normalizeGroup(group);
+        const grouped = !isUngrouped(normalizedGroup);
+
+        elements.groupNameInput.dataset.value = grouped ? normalizedGroup : '';
+        elements.groupNameInput.value = grouped ? normalizedGroup : '';
+        elements.groupNameInput.disabled = grouped;
+        elements.groupNameInput.style.opacity = grouped ? 0.5 : 1;
+    }
+
+    function openBookmarkModal(id = null) {
+        if (id) {
+            const bookmark = state.bookmarks.find((item) => item.id === id);
+            if (!bookmark) {
+                return;
+            }
+
+            elements.bookmarkIdInput.value = bookmark.id;
+            elements.bookmarkNameInput.value = bookmark.name;
+            elements.bookmarkUrlInput.value = bookmark.url;
+            setGroupInputState(bookmark.group);
+            elements.modalTitle.textContent = 'Edit Bookmark';
         } else {
-            listr += `<li data-value="${data}">${data}</li>`
+            elements.bookmarkIdInput.value = '';
+            elements.bookmarkNameInput.value = '';
+            elements.bookmarkUrlInput.value = '';
+            setGroupInputState('');
+            elements.modalTitle.textContent = 'Add Bookmark';
         }
-    });
-    modalselect.innerHTML = listr;
 
-    bookmarkModal.classList.add('active');
-    bookmarkNameInput.focus();
-    modalopenli();
-}
+        renderGroupOptions();
+        elements.bookmarkModal.classList.add('active');
+        elements.bookmarkNameInput.focus();
+    }
 
-function closeModal() {
-    bookmarkModal.classList.remove('active');
-}
+    function closeBookmarkModal() {
+        elements.bookmarkModal.classList.remove('active');
+        elements.groupSelect.classList.remove('modalgroupactive');
+        groupIcon.classList.add('fa-chevron-down');
+        groupIcon.classList.remove('fa-chevron-up');
+    }
 
-function closeGroupModal() {
-    bookmarkgroupModal.classList.remove('active');
-}
+    function openGroupModal(group) {
+        renderGroupBookmarks(group);
+    }
 
-saveBookmarkGroupBtn.addEventListener("click",(e)=>{
-    let val = groupNameModal.dataset.value;
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get('matrix_bookmarks').then(result => {
-            if (result.matrix_bookmarks) {
-                bookmarks = result.matrix_bookmarks;
-            } else {
-                bookmarks = custom_default;
+    function closeGroupModal() {
+        elements.bookmarkGroupModal.classList.remove('active');
+    }
+
+    function openDeleteGroupModal(d) {
+      elements.deletegroupModal.classList.add('active');
+      elements.deleteGrpOnly.dataset.value = d.target.dataset.value;
+      elements.deleteGrpAll.dataset.value = d.target.dataset.value;
+    }
+
+    function closeDeleteGroupModal() {
+        elements.deletegroupModal.classList.remove('active');
+    }
+
+    function deleteGroupOnly() {
+      if (!confirm("The group will be removed, and your bookmarks will be moved out of the group.\nAre you sure?")) {
+        return;
+      }
+      let group = elements.deleteGrpOnly.dataset.value
+      state.bookmarks.forEach((bookmark) => {
+          if (bookmark.group === group) {
+              bookmark.group = "";
+          }
+      });
+      saveBookmarksToStorage();
+      closeDeleteGroupModal()
+      closeGroupModal()
+      renderBookmarks();
+    }
+
+    function deleteGroupAll() {
+      if (!confirm("The group and every bookmark inside it will be completely erased.\nAre you sure?")) {
+        return;
+      }
+      let group = elements.deleteGrpOnly.dataset.value
+      const otherBookmarks = state.bookmarks.filter((bookmark) => bookmark.group !== group);
+      state.bookmarks = otherBookmarks
+
+      saveBookmarksToStorage();
+      closeDeleteGroupModal()
+      closeGroupModal()
+      renderBookmarks();
+      
+    }
+ 
+
+    function saveBookmark() {
+        const id = elements.bookmarkIdInput.value;
+        const name = elements.bookmarkNameInput.value.trim();
+        let url = elements.bookmarkUrlInput.value.trim();
+        const group = elements.groupNameInput.value.trim();
+
+        if (!name || !url) {
+            alert('Please enter both name and URL');
+            return;
+        }
+
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = `https://${url}`;
+        }
+
+        let previousGroup = '';
+
+        if (id) {
+            const index = state.bookmarks.findIndex((bookmark) => bookmark.id === id);
+            if (index !== -1) {
+                previousGroup = state.bookmarks[index].group;
+                state.bookmarks[index] = { id, name, url, group };
             }
-        })
-    }else{
-        bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
-    }
-
-    if(!groupNameModal.value){
-        alert('Please enter Name');
-        return;
-    }
-
-    bookmarks.map((d)=>{
-        if(d.group == groupNameModal.dataset.value){
-            d.group = groupNameModal.value;
+        } else {
+            state.bookmarks.push({
+                id: Date.now().toString(),
+                name,
+                url,
+                group
+            });
         }
-    })
 
-    saveBookmarksToStorage();
-    renderBookmarks();
-    closeGroupModal();
-
-})
-
-function saveBookmark() {
-    const id = bookmarkIdInput.value;
-    const name = bookmarkNameInput.value.trim();
-    let url = bookmarkUrlInput.value.trim();
-    let group = groupName.value.trim();
-
-    if (!name || !url) {
-        alert('Please enter both name and URL');
-        return;
-    }
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
-    }
-    let prev = ""
-    if (id) {
-        // Edit existing
-        const index = bookmarks.findIndex(b => b.id === id);
-        prev = bookmarks[index].group;
-        if (index !== -1) {
-            bookmarks[index] = { id, name, url, group };
-        }
-    } else {
-        // Add new
-        const newId = Date.now().toString();
-        bookmarks.push({ id: newId, name, url, group });
-    }
-
-    saveBookmarksToStorage();
-    renderBookmarks();
-    closeModal();
-
-    if([...bookmarkgroupModal.classList].includes("active")){
-        openModalGroup(prev)
-    }
-
-}
-
-
-function deleteBookmark(id) {
-    if (confirm('Are you sure you want to delete this bookmark?')) {
-        this_one = bookmarks.filter(b => b.id == id);
-        bookmarks = bookmarks.filter(b => b.id !== id);
-        let grp = this_one[0].group;
         saveBookmarksToStorage();
         renderBookmarks();
-        if ([...bookmarkgroupModal.classList].includes("active")) {
-            openModalGroup(grp)
+        closeBookmarkModal();
+
+        if (elements.bookmarkGroupModal.classList.contains('active')) {
+            renderGroupBookmarks(previousGroup);
         }
     }
-}
 
-addBookmarkBtn.addEventListener('click', () => openModal());
-cancelBookmarkBtn.addEventListener('click', closeModal);
-cancelBookmarkGroupBtn.addEventListener('click', closeGroupModal);
-saveBookmarkBtn.addEventListener('click', saveBookmark);
+    function renameGroup() {
+        const currentGroup = elements.groupNameModal.dataset.value;
+        const nextGroup = elements.groupNameModal.value.trim();
 
-bookmarkModal.addEventListener('click', (e) => {
-    if (e.target === bookmarkModal) {
-        closeModal();
-    }
-});
+        if (!nextGroup) {
+            alert('Please enter Name');
+            return;
+        }
 
-bookmarkgroupModal.addEventListener('click', (e) => {
-    if (e.target === bookmarkgroupModal) {
+        state.bookmarks.forEach((bookmark) => {
+            if (bookmark.group === currentGroup) {
+                bookmark.group = nextGroup;
+            }
+        });
+
+        saveBookmarksToStorage();
+        renderBookmarks();
         closeGroupModal();
     }
-});
 
-bookmarkNameInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') bookmarkUrlInput.focus();
-});
+    function deleteBookmark(id) {
+        if (!confirm('Are you sure you want to delete this bookmark?')) {
+            return;
+        }
 
-bookmarkUrlInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') saveBookmark();
-});
+        const bookmark = state.bookmarks.find((item) => item.id === id);
+        if (!bookmark) {
+            return;
+        }
 
-// Initialize data
-loadDataFromStorage(() => {
-    applySettings();
-    renderBookmarks();
-});
+        state.bookmarks = state.bookmarks.filter((item) => item.id !== id);
+        saveBookmarksToStorage();
+        renderBookmarks();
 
-groupBookmarkBtn.addEventListener("click", (e) => {
-    modalselect.classList.toggle("modalgroupactive");
-    groupicon.classList.toggle("fa-chevron-down");
-    groupicon.classList.toggle("fa-chevron-up");
-})
+        if (elements.bookmarkGroupModal.classList.contains('active')) {
+            renderGroupBookmarks(bookmark.group);
+        }
+    }
 
+    function handleBookmarkContainerClick(event) {
+        const editButton = event.target.closest('.edit-btn');
+        if (editButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            openBookmarkModal(editButton.dataset.id);
+            return;
+        }
 
-function modalopenli() {
-    modalselect.querySelectorAll("li").forEach((li) => {
-        li.addEventListener("click", (e) => {
-            let v = e.target.dataset.value;
-            if (v.toLowerCase() == "none" || v.toLowerCase() == "" || v.toLowerCase() == "null") {
-                groupName.value = "";
-                groupName.dataset.value = "";
-                groupName.disabled = false;
-                groupName.style.opacity = 1;
-                modalselect.classList.toggle("modalgroupactive");
-                groupicon.classList.toggle("fa-chevron-down");
-                groupicon.classList.toggle("fa-chevron-up");
-            } else {
-                groupName.value = e.target.dataset.value;
-                groupName.dataset.value = e.target.dataset.value;
-                groupName.disabled = true;
-                groupName.style.opacity = 0.5;
+        const deleteButton = event.target.closest('.delete-btn');
+        if (deleteButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteBookmark(deleteButton.dataset.id);
+            return;
+        }
+
+        const folder = event.target.closest('.open-folder');
+        if (folder) {
+            event.preventDefault();
+            event.stopPropagation();
+            openGroupModal(folder.dataset.value);
+        }
+    }
+
+    function handleSearchSubmit(event) {
+        if (event.key !== 'Enter') {
+            return;
+        }
+
+        const query = elements.searchField.value.trim();
+        if (!query) {
+            return;
+        }
+
+        if (URL_PATTERN.test(query) && !query.includes(' ')) {
+            window.location.href =
+                query.startsWith('http://') || query.startsWith('https://') ? query : `https://${query}`;
+            return;
+        }
+
+        window.location.href = `${state.searchEngine}${encodeURIComponent(query)}`;
+    }
+
+    function toggleGroupSelect() {
+        elements.groupSelect.classList.toggle('modalgroupactive');
+        groupIcon.classList.toggle('fa-chevron-down');
+        groupIcon.classList.toggle('fa-chevron-up');
+    }
+
+    function selectGroupOption(event) {
+        const option = event.target.closest('li');
+        if (!option) {
+            return;
+        }
+
+        const selectedGroup = option.dataset.value;
+        setGroupInputState(selectedGroup);
+
+        if (isUngrouped(selectedGroup)) {
+            toggleGroupSelect();
+        }
+    }
+
+    function bindEvents() {
+        elements.colorPicker.addEventListener('input', (event) => {
+            updateThemeColor(event.target.value);
+            updateFavicon(event.target.value);
+        });
+
+        elements.colorPicker.addEventListener('change', (event) => {
+            state.settings.themeColor = event.target.value;
+            saveSettingsToStorage();
+            updateFavicon(event.target.value);
+        });
+
+        elements.bgColorPicker?.addEventListener('input', (event) => {
+            updateBackgroundColor(event.target.value);
+        });
+
+        elements.bgColorPicker?.addEventListener('change', (event) => {
+            state.settings.backgroundColor = event.target.value;
+            saveSettingsToStorage();
+        });
+
+        elements.speedSlider.addEventListener('input', (event) => {
+            state.settings.animationSpeed = Number.parseInt(event.target.value, 10);
+            elements.speedValue.textContent = state.settings.animationSpeed;
+        });
+
+        elements.speedSlider.addEventListener('change', saveSettingsToStorage);
+
+        elements.fontSizeSlider.addEventListener('input', (event) => {
+            state.settings.fontSize = Number.parseInt(event.target.value, 10);
+            elements.fontSizeValue.textContent = state.settings.fontSize;
+            resetRain();
+            clearCanvas();
+        });
+
+        elements.fontSizeSlider.addEventListener('change', saveSettingsToStorage);
+
+        elements.resetSettingsBtn?.addEventListener('click', () => {
+            state.settings = { ...DEFAULT_SETTINGS };
+            saveSettingsToStorage();
+            applySettings();
+        });
+
+        elements.timeFormatToggle.addEventListener('change', (event) => {
+            state.settings.is24HourFormat = !event.target.checked;
+            saveSettingsToStorage();
+            updateClock();
+        });
+
+        elements.secondsToggle.addEventListener('change', (event) => {
+            state.settings.showSeconds = event.target.checked;
+            saveSettingsToStorage();
+            updateClock();
+        });
+
+        elements.menuToggle.addEventListener('click', () => {
+            elements.matrixControls.classList.toggle('hidden');
+        });
+
+        elements.searchField.addEventListener('keydown', handleSearchSubmit);
+        elements.bookmarksContainer.addEventListener('click', handleBookmarkContainerClick);
+        elements.bookmarksContainerGroup.addEventListener('click', handleBookmarkContainerClick);
+        elements.addBookmarkBtn.addEventListener('click', () => openBookmarkModal());
+        elements.cancelBookmarkBtn.addEventListener('click', closeBookmarkModal);
+        elements.cancelBookmarkGroupBtn.addEventListener('click', closeGroupModal);
+        elements.saveBookmarkBtn.addEventListener('click', saveBookmark);
+        elements.saveBookmarkGroupBtn.addEventListener('click', renameGroup);
+        elements.groupBookmarkBtn.addEventListener('click', toggleGroupSelect);
+        elements.groupSelect.addEventListener('click', selectGroupOption);
+        elements.cancelGroupBtnDelete.addEventListener('click', closeDeleteGroupModal);
+        elements.deleteBookmarkGroupBtn.addEventListener('click', openDeleteGroupModal);
+        elements.deleteGrpOnly.addEventListener('click', deleteGroupOnly);
+        elements.deleteGrpAll.addEventListener('click', deleteGroupAll);
+
+        elements.bookmarkModal.addEventListener('click', (event) => {
+            if (event.target === elements.bookmarkModal) {
+                closeBookmarkModal();
             }
-        })
-    })
-}
+        });
 
-// Start animation
-animate();
+        elements.bookmarkGroupModal.addEventListener('click', (event) => {
+            if (event.target === elements.bookmarkGroupModal) {
+                closeGroupModal();
+            }
+        });
+
+        elements.bookmarkNameInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                elements.bookmarkUrlInput.focus();
+            }
+        });
+
+        elements.bookmarkUrlInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                saveBookmark();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (resizeFrame) {
+                cancelAnimationFrame(resizeFrame);
+            }
+
+            resizeFrame = requestAnimationFrame(() => {
+                resizeCanvas();
+                resizeFrame = null;
+            });
+        });
+    }
+
+    async function init() {
+        bindEvents();
+        resizeCanvas();
+        await loadConfigDefaults();
+        await loadDataFromStorage();
+        applySettings();
+        renderBookmarks();
+        animate();
+    }
+
+    init();
+})();
