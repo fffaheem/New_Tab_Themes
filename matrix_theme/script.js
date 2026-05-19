@@ -730,7 +730,7 @@ function saveBookmark() {
     renderBookmarks();
     closeModal();
 
-    if([... bookmarkgroupModal.classList].includes("active")){
+    if([...bookmarkgroupModal.classList].includes("active")){
         openModalGroup(prev)
     }
 
