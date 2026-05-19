@@ -64,7 +64,6 @@
         bookmarkModal: document.getElementById('bookmarkModal'),
         bookmarkGroupModal: document.getElementById('bookmarkgroupModal'),
         cancelBookmarkBtn: document.getElementById('cancelBookmarkBtn'),
-        deleteBookmarkGroupBtn: document.getElementById('deleteBookmarkGroupBtn'),
         cancelBookmarkGroupBtn: document.getElementById('cancelBookmarkGroupBtn'),
         saveBookmarkBtn: document.getElementById('saveBookmarkBtn'),
         saveBookmarkGroupBtn: document.getElementById('saveBookmarkGroupBtn'),
@@ -75,7 +74,12 @@
         groupNameInput: document.getElementById('groupName'),
         groupNameModal: document.getElementById('groupNameModal'),
         groupBookmarkBtn: document.getElementById('groupBookmarkBtn'),
-        groupSelect: document.getElementById('modalselect')
+        groupSelect: document.getElementById('modalselect'),
+        deleteBookmarkGroupBtn: document.getElementById('deleteBookmarkGroupBtn')           ,
+        deletegroupModal: document.getElementById('deletegroupModal'),
+        cancelGroupBtnDelete: document.getElementById('cancelGroupBtnDelete'),
+        deleteGrpOnly: document.getElementById('deleteGrpOnly'),
+        deleteGrpAll: document.getElementById('deleteGrpAll'),
     };
 
     const context = elements.canvas.getContext('2d');
@@ -464,7 +468,7 @@
 
         const fragment = document.createDocumentFragment();
         groupedBookmarks.forEach((bookmark) => fragment.appendChild(createBookmarkElement(bookmark)));
-
+        elements.deleteBookmarkGroupBtn.dataset.value = group;
         elements.groupNameModal.dataset.value = group;
         elements.groupNameModal.value = group;
         elements.bookmarksContainerGroup.replaceChildren(fragment);
@@ -537,6 +541,48 @@
     function closeGroupModal() {
         elements.bookmarkGroupModal.classList.remove('active');
     }
+
+    function openDeleteGroupModal(d) {
+      elements.deletegroupModal.classList.add('active');
+      elements.deleteGrpOnly.dataset.value = d.target.dataset.value;
+      elements.deleteGrpAll.dataset.value = d.target.dataset.value;
+    }
+
+    function closeDeleteGroupModal() {
+        elements.deletegroupModal.classList.remove('active');
+    }
+
+    function deleteGroupOnly() {
+      if (!confirm("The group will be removed, and your bookmarks will be moved out of the group.\nAre you sure?")) {
+        return;
+      }
+      let group = elements.deleteGrpOnly.dataset.value
+      state.bookmarks.forEach((bookmark) => {
+          if (bookmark.group === group) {
+              bookmark.group = "";
+          }
+      });
+      saveBookmarksToStorage();
+      closeDeleteGroupModal()
+      closeGroupModal()
+      renderBookmarks();
+    }
+
+    function deleteGroupAll() {
+      if (!confirm("The group and every bookmark inside it will be completely erased.\nAre you sure?")) {
+        return;
+      }
+      let group = elements.deleteGrpOnly.dataset.value
+      const otherBookmarks = state.bookmarks.filter((bookmark) => bookmark.group !== group);
+      state.bookmarks = otherBookmarks
+
+      saveBookmarksToStorage();
+      closeDeleteGroupModal()
+      closeGroupModal()
+      renderBookmarks();
+      
+    }
+ 
 
     function saveBookmark() {
         const id = elements.bookmarkIdInput.value;
@@ -751,6 +797,10 @@
         elements.saveBookmarkGroupBtn.addEventListener('click', renameGroup);
         elements.groupBookmarkBtn.addEventListener('click', toggleGroupSelect);
         elements.groupSelect.addEventListener('click', selectGroupOption);
+        elements.cancelGroupBtnDelete.addEventListener('click', closeDeleteGroupModal);
+        elements.deleteBookmarkGroupBtn.addEventListener('click', openDeleteGroupModal);
+        elements.deleteGrpOnly.addEventListener('click', deleteGroupOnly);
+        elements.deleteGrpAll.addEventListener('click', deleteGroupAll);
 
         elements.bookmarkModal.addEventListener('click', (event) => {
             if (event.target === elements.bookmarkModal) {
