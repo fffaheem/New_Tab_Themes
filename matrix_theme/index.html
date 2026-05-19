@@ -119,11 +119,30 @@
 
             </div>
             <div class="modal-actions">
-                <button class="btn-cancel" id="cancelBookmarkGroupBtn">Cancel</button>
-                <button class="btn-save" id="saveBookmarkGroupBtn">Save</button>
+                <button class="btn-delete" id="deleteBookmarkGroupBtn">Delete</button>
+                <div class="modal-actions-group-btns">
+                    <button class="btn-cancel" id="cancelBookmarkGroupBtn">Cancel</button>
+                    <button class="btn-save" id="saveBookmarkGroupBtn">Save</button>
+                </div>
             </div>
         </div>
     </div>
+    
+    <!-- group Modal delete confirm -->
+    <div class="modal-overlay-delete" id="deletegroupModal">
+        <div class="modal-content">
+            <div class="modal-delete-btn">
+                
+                <button class="modal-delete-confirm">Delete group only (Keep bookmarks)</button>
+                <button class="modal-delete-confirm">Delete group and all bookmarks</button>
+
+            </div>
+            <div class="modal-actions btn-delete-cancel">
+                <button class="btn-cancel " id="cancelGroupBtnDelete">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
 </body>
 <script src="./script.js"></script>
 

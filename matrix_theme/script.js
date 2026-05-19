@@ -64,6 +64,7 @@
         bookmarkModal: document.getElementById('bookmarkModal'),
         bookmarkGroupModal: document.getElementById('bookmarkgroupModal'),
         cancelBookmarkBtn: document.getElementById('cancelBookmarkBtn'),
+        deleteBookmarkGroupBtn: document.getElementById('deleteBookmarkGroupBtn'),
         cancelBookmarkGroupBtn: document.getElementById('cancelBookmarkGroupBtn'),
         saveBookmarkBtn: document.getElementById('saveBookmarkBtn'),
         saveBookmarkGroupBtn: document.getElementById('saveBookmarkGroupBtn'),

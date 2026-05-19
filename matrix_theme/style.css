@@ -1,6 +1,7 @@
 :root {
     --theme-color: #00FF41;
     --bg-color: #000000;
+    --danger:  255, 0, 0;
     --bg-color-rgb: 0, 0, 0;
     /* Default Matrix green, will be updated by JS */
     --ui-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -456,6 +457,57 @@ input[type="checkbox"] {
 
 /* Modal group */
 
+.modal-overlay-delete{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(var(--bg-color-rgb), 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 15;
+    transition: opacity 0.3s ease;
+    /* display: flex; */
+
+    display: none;
+    opacity: 0;
+
+}
+
+.modal-overlay-delete.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-actions.btn-delete-cancel{
+    justify-content: end;
+}
+
+.modal-delete-btn {
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
+}
+
+.modal-delete-confirm{
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--ui-font);
+    font-weight: bold;
+    background-color: transparent;
+    color: var(--theme-color);
+    border: 1px solid rgba(var(--theme-color-rgb), 0.6);
+    transition: all 0.3s;
+}
+
+.modal-delete-confirm:hover{
+    background-color: rgba(var(--danger), 0.2);
+}
+
+/* Modal group */
+
 .modal-overlay-group{
     position: fixed;
     top: 0;
@@ -575,6 +627,12 @@ input[type="checkbox"] {
     border: 1px solid rgba(var(--theme-color-rgb), 0.6);
 }
 
+.btn-delete {
+    background-color: transparent;
+    color: rgb(var(--danger));
+    border: 1px solid rgba(var(--theme-color-rgb), 0.6);
+}
+
 .btn-save:hover {
     box-shadow: 0 0 15px rgba(var(--theme-color-rgb), 0.8);
     background-color: #fff;
@@ -582,6 +640,15 @@ input[type="checkbox"] {
 
 .btn-cancel:hover {
     background-color: rgba(var(--theme-color-rgb), 0.2);
+}
+
+.btn-delete:hover {
+    background-color: rgba(var(--danger), 0.2);
+}
+
+.modal-actions-group-btns{
+    display: flex;
+    gap: 0.5rem;
 }
 
 #modalgroup{
