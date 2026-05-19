@@ -112,29 +112,47 @@ Your changes will apply instantly.
 
 ---
 
-## Custom Bookmarks
+## Manual Configuration
 
-You can manually edit the default bookmarks inside:
+You can manually edit the settings, default bookmarks, and search engine.
 
-```js
-script.js
-```
+Locate the `config.json` file and modify the entries as needed.
 
-Locate the `custom_default` variable to modify bookmark entries.
-
+Make sure each bookmark `id` is unique.
 
 Example:
 
-```js
-let custom_default =
-[
-    { id: '1', name: 'Google', url: 'https://google.com' },
-    { id: '2', name: 'YouTube', url: 'https://youtube.com' }
-];
+```json
+{
+  "info": "matrix_default: 'true' = always load, 'once' = load once, 'no' = disable",
+  "matrix_default": "true",
+  "matrix_search": "https://www.google.com/search?q=",
+  "matrix_settings": {
+    "animationSpeed": 18,
+    "backgroundColor": "#000000",
+    "fontSize": 20,
+    "is24HourFormat": true,
+    "showSeconds": true,
+    "themeColor": "#00FF41"
+  },
+  "matrix_bookmarks": [
+    {
+      "id": "1",
+      "name": "Google",
+      "url": "https://google.com",
+      "group": ""
+    },
+    {
+      "id": "2",
+      "name": "YouTube",
+      "url": "https://youtube.com",
+      "group": ""
+    }
+  ]
+}
 ```
 
 ---
-
 
 <div>
 

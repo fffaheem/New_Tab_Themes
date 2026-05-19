@@ -12,12 +12,60 @@ let frameCount = 0;
 
 let bookmarks = [];
 
-let custom_default =
-[
-    { id: '1', name: 'Google', url: 'https://google.com' },
-    { id: '2', name: 'YouTube', url: 'https://youtube.com' }
-];
+let search_engine = "https://www.google.com/search?q=";
 
+let custom_default =
+    [
+        { id: '1', name: 'Google', url: 'https://google.com', group: "" },
+        { id: '2', name: 'YouTube', url: 'https://youtube.com', group: "" },
+
+    ];
+
+const defaultSettings = {
+    themeColor: '#00FF41',
+    backgroundColor: '#000000',
+    animationSpeed: 18,
+    fontSize: 20,
+    is24HourFormat: true,
+    showSeconds: true
+};
+
+function inject(data,d) {
+  let matrix_settings = data.matrix_settings;
+  let matrix_bookmarks = data.matrix_bookmarks;
+  let matrix_search = data.matrix_search;
+  
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ 'matrix_settings': matrix_settings });
+      chrome.storage.local.set({ 'matrix_bookmarks': matrix_bookmarks });
+      chrome.storage.local.set({ 'matrix_search': matrix_search });
+      chrome.storage.local.set({ 'matrix_default': d });
+  } else {
+      localStorage.setItem('matrix_settings', JSON.stringify(matrix_settings));
+      localStorage.setItem('matrix_bookmarks', JSON.stringify(matrix_bookmarks));
+      localStorage.setItem('matrix_search', JSON.stringify(matrix_search));
+      localStorage.setItem('matrix_default', JSON.stringify(d));
+  }
+}
+fetch(chrome.runtime.getURL("config.json"))
+  .then(response => response.json())
+  .then(config => {
+    let data = config;
+    let matrix_search = data.matrix_search;
+    let matrix_default = data.matrix_default;
+    search_engine = matrix_search;
+    if (matrix_default.toLowerCase() == "true") {
+      inject(data,"true");
+      return;
+    }
+    
+    chrome.storage.local.get("matrix_default").then((data) => {
+      const matrixDefault = data.matrix_default ?? "once";
+      if (matrixDefault != "no") {
+        inject(data,"no");
+      }
+    })
+});
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -269,7 +317,7 @@ searchField.addEventListener('keypress', function (e) {
                 window.location.href = url;
             } else {
                 // Search Google
-                window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                window.location.href = search_engine + encodeURIComponent(query);
             }
         }
     }
@@ -277,23 +325,23 @@ searchField.addEventListener('keypress', function (e) {
 
 // Bookmark Functionality
 const bookmarksContainer = document.getElementById('bookmarksContainer');
+const bookmarksContainerGroup = document.getElementById('bookmarksContainerGroup');
 const addBookmarkBtn = document.getElementById('addBookmarkBtn');
 const bookmarkModal = document.getElementById('bookmarkModal');
+const bookmarkgroupModal = document.getElementById('bookmarkgroupModal');
 const cancelBookmarkBtn = document.getElementById('cancelBookmarkBtn');
+const cancelBookmarkGroupBtn = document.getElementById('cancelBookmarkGroupBtn');
 const saveBookmarkBtn = document.getElementById('saveBookmarkBtn');
 const bookmarkIdInput = document.getElementById('bookmarkId');
 const bookmarkNameInput = document.getElementById('bookmarkName');
 const bookmarkUrlInput = document.getElementById('bookmarkUrl');
 const modalTitle = document.getElementById('modalTitle');
 
-const defaultSettings = {
-    themeColor: '#00FF41',
-    backgroundColor: '#000000',
-    animationSpeed: 18,
-    fontSize: 20,
-    is24HourFormat: true,
-    showSeconds: true
-};
+let modalgroupout = document.getElementById("modalgroupout")
+let groupName = modalgroupout.querySelector("#groupName")
+let groupBookmarkBtn = modalgroupout.querySelector("#groupBookmarkBtn")
+let groupicon = modalgroupout.querySelector("i");
+let modalselect = modalgroupout.querySelector("#modalselect")
 
 let settings = { ...defaultSettings };
 
@@ -397,7 +445,7 @@ function loadDataFromStorage(callback) {
             if (result.matrix_bookmarks) {
                 bookmarks = result.matrix_bookmarks;
             } else {
-              bookmarks = custom_default;
+                bookmarks = custom_default;
             }
             if (result.matrix_settings) {
                 settings = result.matrix_settings;
@@ -405,7 +453,7 @@ function loadDataFromStorage(callback) {
             callback();
         });
     } else {
-      bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
+        bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
         const savedSettings = JSON.parse(localStorage.getItem('matrix_settings'));
         if (savedSettings) {
             settings = savedSettings;
@@ -416,22 +464,60 @@ function loadDataFromStorage(callback) {
 
 function renderBookmarks() {
     // Clear existing bookmarks
+    // return
     const items = bookmarksContainer.querySelectorAll('.bookmark-item');
     items.forEach(item => item.remove());
 
+    let group_arr = bookmarks.map(gr => gr.group);
+
+    let group_distinct = [
+        ...new Set(group_arr)
+    ].filter(group =>
+        group &&
+        group.toLowerCase() !== "none" &&
+        group.toLowerCase() !== "null"
+    );
+
+
     bookmarks.forEach(bookmark => {
-        const a = document.createElement('a');
-        a.href = bookmark.url;
-        a.className = 'bookmark-item';
-        a.innerHTML = `
-            <i class="fas fa-globe favicon"></i>
-            <span>${bookmark.name}</span>
-            <div class="bookmark-actions">
-                <button class="edit-btn" data-id="${bookmark.id}" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                <button class="delete-btn" data-id="${bookmark.id}" title="Delete"><i class="fas fa-trash"></i></button>
-            </div>
+        let n = bookmark.name;
+        let url = bookmark.url;
+        let id = bookmark.id;
+        let group = bookmark.group;
+        if (group.toLowerCase() == "none" || group.toLowerCase() == "" || group.toLowerCase() == "null") {
+            let a = document.createElement('a');
+            a.href = url;
+            a.className = 'bookmark-item';
+            a.innerHTML = `
+                <i class="fas fa-globe favicon"></i>
+                <span>${n}</span>
+                <div class="bookmark-actions">
+                    <button class="edit-btn" data-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="delete-btn" data-id="${id}" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            bookmarksContainer.append(a);
+        }
+    });
+
+    group_distinct.forEach(grp=>{
+        let div = document.createElement('div');
+        div.className = 'bookmark-item open-folder';
+        div.dataset.value = grp
+        div.innerHTML = `
+            <i class="fa fa-folder" aria-hidden="true"></i>
+            <span>${grp}</span>
         `;
-        bookmarksContainer.insertBefore(a, addBookmarkBtn);
+        bookmarksContainer.append(div);
+    })
+
+    // Add event listeners for folder buttons
+    document.querySelectorAll('.open-folder').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent navigating
+            e.stopPropagation();
+            openModalGroup(e.currentTarget.dataset.value);
+        });
     });
 
     // Add event listeners for edit/delete buttons
@@ -452,33 +538,171 @@ function renderBookmarks() {
     });
 }
 
+function openModalGroup(val){
+    bookmarkgroupModal.classList.add('active');
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get('matrix_bookmarks').then(result => {
+            if (result.matrix_bookmarks) {
+                bookmarks = result.matrix_bookmarks;
+            } else {
+                bookmarks = custom_default;
+            }
+        })
+    }else{
+        bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
+    }
+
+    let grp_arr = bookmarks.filter(g => g.group == val)
+    if(grp_arr.length < 1){
+        closeGroupModal()
+        return;
+    }
+    bookmarksContainerGroup.innerHTML = ""
+    grp_arr.forEach((bkmrk)=>{
+        let id = bkmrk.id;
+        let name = bkmrk.name;
+        let url = bkmrk.url;
+        let grp = bkmrk.group;
+
+        let a = document.createElement('a');
+        a.href = url;
+        a.className = 'bookmark-item';
+        a.innerHTML = `
+            <i class="fas fa-globe favicon"></i>
+            <span>${name}</span>
+            <div class="bookmark-actions">
+                <button class="edit-btn" data-id="${id}" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                <button class="delete-btn" data-id="${id}" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+
+        bookmarksContainerGroup.append(a);
+
+
+    })
+
+    groupNameModal.dataset.value = val;
+    groupNameModal.value = val;
+    bookmarkgroupModal.classList.add('active');
+
+    // Add event listeners for edit
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent navigating
+            e.stopPropagation();
+            openModal(e.currentTarget.getAttribute('data-id'));
+        });
+    });
+
+    // Add event listeners for delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent navigating
+            e.stopPropagation();
+            deleteBookmark(e.currentTarget.getAttribute('data-id'));
+        });
+    });
+}
+
 function openModal(id = null) {
     if (id) {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.get('matrix_bookmarks').then(result => {
+                if (result.matrix_bookmarks) {
+                    bookmarks = result.matrix_bookmarks;
+                } else {
+                    bookmarks = custom_default;
+                }
+            })
+        } else {
+            bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
+        }
         const bookmark = bookmarks.find(b => b.id === id);
         if (bookmark) {
             bookmarkIdInput.value = bookmark.id;
             bookmarkNameInput.value = bookmark.name;
             bookmarkUrlInput.value = bookmark.url;
+            groupName.dataset.value = bookmark.group;
+            groupName.value = bookmark.group;
+            if (groupName.value.toLowerCase() != "none" && groupName.value.toLowerCase() != "" && groupName.value.toLowerCase() != "null") {
+                groupName.disabled = true;
+                groupName.style.opacity = 0.5;
+            } else {
+                groupName.style.opacity = 1;
+                groupName.disabled = false;
+            }
             modalTitle.textContent = 'Edit Bookmark';
         }
     } else {
         bookmarkIdInput.value = '';
         bookmarkNameInput.value = '';
         bookmarkUrlInput.value = '';
+        groupName.dataset.value = '';
+        groupName.value = '';
         modalTitle.textContent = 'Add Bookmark';
     }
+
+    let matrix_bookmarks_arr = bookmarks.map(a => a.group)
+    matrix_bookmarks_set = new Set(matrix_bookmarks_arr);
+    matrix_bookmarks_arr = [...matrix_bookmarks_set]
+    let listr = "<li data-value='none'>None</li> "
+    matrix_bookmarks_arr.forEach(data => {
+        if (data.toLowerCase() == "none" || data.toLowerCase() == "" || data.toLowerCase() == "null") {
+        } else {
+            listr += `<li data-value="${data}">${data}</li>`
+        }
+    });
+    modalselect.innerHTML = listr;
+
     bookmarkModal.classList.add('active');
     bookmarkNameInput.focus();
+    modalopenli();
 }
 
 function closeModal() {
     bookmarkModal.classList.remove('active');
 }
 
+function closeGroupModal() {
+    bookmarkgroupModal.classList.remove('active');
+}
+
+saveBookmarkGroupBtn.addEventListener("click",(e)=>{
+    let val = groupNameModal.dataset.value;
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get('matrix_bookmarks').then(result => {
+            if (result.matrix_bookmarks) {
+                bookmarks = result.matrix_bookmarks;
+            } else {
+                bookmarks = custom_default;
+            }
+        })
+    }else{
+        bookmarks = JSON.parse(localStorage.getItem('matrix_bookmarks')) || custom_default;
+    }
+
+    if(!groupNameModal.value){
+        alert('Please enter Name');
+        return;
+    }
+
+    bookmarks.map((d)=>{
+        if(d.group == groupNameModal.dataset.value){
+            d.group = groupNameModal.value;
+        }
+    })
+
+    saveBookmarksToStorage();
+    renderBookmarks();
+    closeGroupModal();
+
+})
+
 function saveBookmark() {
     const id = bookmarkIdInput.value;
     const name = bookmarkNameInput.value.trim();
     let url = bookmarkUrlInput.value.trim();
+    let group = groupName.value.trim();
 
     if (!name || !url) {
         alert('Please enter both name and URL');
@@ -488,39 +712,58 @@ function saveBookmark() {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
     }
-
+    let prev = ""
     if (id) {
         // Edit existing
         const index = bookmarks.findIndex(b => b.id === id);
+        prev = bookmarks[index].group;
         if (index !== -1) {
-            bookmarks[index] = { id, name, url };
+            bookmarks[index] = { id, name, url, group };
         }
     } else {
         // Add new
         const newId = Date.now().toString();
-        bookmarks.push({ id: newId, name, url });
+        bookmarks.push({ id: newId, name, url, group });
     }
 
     saveBookmarksToStorage();
     renderBookmarks();
     closeModal();
+
+    if([...bookmarkgroupModal.classList].includes("active")){
+        openModalGroup(prev)
+    }
+
 }
+
 
 function deleteBookmark(id) {
     if (confirm('Are you sure you want to delete this bookmark?')) {
+        this_one = bookmarks.filter(b => b.id == id);
         bookmarks = bookmarks.filter(b => b.id !== id);
+        let grp = this_one[0].group;
         saveBookmarksToStorage();
         renderBookmarks();
+        if ([...bookmarkgroupModal.classList].includes("active")) {
+            openModalGroup(grp)
+        }
     }
 }
 
 addBookmarkBtn.addEventListener('click', () => openModal());
 cancelBookmarkBtn.addEventListener('click', closeModal);
+cancelBookmarkGroupBtn.addEventListener('click', closeGroupModal);
 saveBookmarkBtn.addEventListener('click', saveBookmark);
 
 bookmarkModal.addEventListener('click', (e) => {
     if (e.target === bookmarkModal) {
         closeModal();
+    }
+});
+
+bookmarkgroupModal.addEventListener('click', (e) => {
+    if (e.target === bookmarkgroupModal) {
+        closeGroupModal();
     }
 });
 
@@ -537,6 +780,35 @@ loadDataFromStorage(() => {
     applySettings();
     renderBookmarks();
 });
+
+groupBookmarkBtn.addEventListener("click", (e) => {
+    modalselect.classList.toggle("modalgroupactive");
+    groupicon.classList.toggle("fa-chevron-down");
+    groupicon.classList.toggle("fa-chevron-up");
+})
+
+
+function modalopenli() {
+    modalselect.querySelectorAll("li").forEach((li) => {
+        li.addEventListener("click", (e) => {
+            let v = e.target.dataset.value;
+            if (v.toLowerCase() == "none" || v.toLowerCase() == "" || v.toLowerCase() == "null") {
+                groupName.value = "";
+                groupName.dataset.value = "";
+                groupName.disabled = false;
+                groupName.style.opacity = 1;
+                modalselect.classList.toggle("modalgroupactive");
+                groupicon.classList.toggle("fa-chevron-down");
+                groupicon.classList.toggle("fa-chevron-up");
+            } else {
+                groupName.value = e.target.dataset.value;
+                groupName.dataset.value = e.target.dataset.value;
+                groupName.disabled = true;
+                groupName.style.opacity = 0.5;
+            }
+        })
+    })
+}
 
 // Start animation
 animate();

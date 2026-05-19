@@ -61,9 +61,9 @@
             </div>
         </div>
     </div>
-
+    <div id="digitalClock" class="digital-clock"></div>
     <div class="center-container">
-        <div id="digitalClock" class="digital-clock"></div>
+
         <div class="brand-title">
             <i class="fas fa-terminal logo-icon"></i>
         </div>
@@ -74,10 +74,15 @@
             </div>
         </div>
 
+
+    </div>
+
+    <div class="bookmarks-section">
         <div class="bookmarks-container" id="bookmarksContainer">
             <!-- Bookmarks injected by JS -->
-            <button id="addBookmarkBtn" class="add-bookmark-btn"><i class="fas fa-plus"></i> Add Bookmark</button>
+
         </div>
+        <button id="addBookmarkBtn" class="add-bookmark-btn"><i class="fas fa-plus"></i> Add Bookmark</button>
     </div>
 
     <!-- Bookmark Modal -->
@@ -87,9 +92,36 @@
             <input type="hidden" id="bookmarkId">
             <input type="text" id="bookmarkName" placeholder="Bookmark Name" autocomplete="off">
             <input type="text" id="bookmarkUrl" placeholder="URL (e.g. https://example.com)" autocomplete="off">
+            <div id="modalgroupout">
+                <div id="modalgroup">
+                    <input type="text" id="groupName" data-value="" placeholder="Group Name (Leave empty for no group) "
+                        autocomplete="off">
+                    <button class="btn-group" id="groupBookmarkBtn"><i class="fa fa-chevron-down"
+                            aria-hidden="true"></i></button>
+                </div>
+                <ul id="modalselect">
+                    <li data-value="None">None</li>
+                </ul>
+            </div>
             <div class="modal-actions">
                 <button class="btn-cancel" id="cancelBookmarkBtn">Cancel</button>
                 <button class="btn-save" id="saveBookmarkBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bookmark group Modal -->
+    <div class="modal-overlay-group" id="bookmarkgroupModal">
+        <div class="modal-content">
+            <input type="text" id="groupNameModal" placeholder="Group Name" autocomplete="off">
+            <div class="bookmarks-container" id="bookmarksContainerGroup">
+                <!-- Bookmarks injected by JS -->
+
+
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelBookmarkGroupBtn">Cancel</button>
+                <button class="btn-save" id="saveBookmarkGroupBtn">Save</button>
             </div>
         </div>
     </div>

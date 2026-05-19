@@ -1,0 +1,17 @@
+{
+  "info": "matrix_default: 'true' = always load, 'once' = load once, 'no' = disable",
+  "matrix_default" : "once",
+  "matrix_search" : "https://www.google.com/search?q=a",
+  "matrix_settings": {
+    "animationSpeed": 18,
+    "backgroundColor": "#000000",
+    "fontSize": 20,
+    "is24HourFormat": true,
+    "showSeconds": true,
+    "themeColor": "#00FF41"
+  },"matrix_bookmarks":
+    [
+      { "id": "1", "name": "Google", "url": "https://google.com", "group": "" },
+      { "id": "2", "name": "YouTube", "url": "https://youtube.com", "group": "" }
+    ]
+}

@@ -12,7 +12,8 @@ body {
     background-color: var(--bg-color);
     font-family: 'Courier New', Courier, monospace;
     color: #fff;
-    display: flex;
+    /* display: flex; */
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
@@ -165,12 +166,16 @@ input[type="checkbox"] {
 }
 
 .center-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    /*gap: 30px;*/
     gap: 1rem;
-    /* Gap between clock and login */
+
     z-index: 10;
 }
 
@@ -186,8 +191,8 @@ input[type="checkbox"] {
     letter-spacing: 2px;
     /* min-width: 220px;  */
     text-align: center;
-
-
+    left: 50%;
+    transform: translateX(-50%);
     position: absolute;
     top: 1.25rem;
     display: flex;
@@ -215,8 +220,9 @@ input[type="checkbox"] {
     align-items: center;
     gap: 25px;
     width: 100%;
-    min-width: 30rem;
-    max-width: 35rem;
+    /* min-width: 30rem; */
+    /* max-width: 35rem; */
+    width: min(40rem, 90vw);
     /*max-width: 600px;*/
     font-family: var(--ui-font);
 }
@@ -314,16 +320,43 @@ input[type="checkbox"] {
 }
 
 /* Bookmarks Styles */
+.bookmarks-section{
+    position: absolute;
+
+    top: calc(50% + 3rem);
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: min(40rem, 90vw);
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 1rem;
+
+    max-height: calc(100vh - (50% + 5rem));
+}
+
 .bookmarks-container {
+    overflow-y: auto;
+    padding-top: 1rem;
+    padding-right: 1rem;
+    overflow-x: hidden;
+
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 1rem;
+
     width: 100%;
-    min-width: 30rem;
-    max-width: 35rem;
-    justify-content: space-between;
-    /* margin-top: 10px; */
-    z-index: 10;
+
+    max-height: 100%;
+
+}
+
+#bookmarksContainerGroup{
+    min-height: auto;
+    max-height: 50vh;
 }
 
 .bookmark-item {
@@ -340,6 +373,8 @@ input[type="checkbox"] {
     font-family: var(--ui-font);
     position: relative;
     box-shadow: 0 0 10px rgba(var(--theme-color-rgb), 0.1);
+    flex-grow: 2;
+    cursor: pointer;
 }
 
 .bookmark-item:hover {
@@ -386,6 +421,9 @@ input[type="checkbox"] {
 }
 
 .add-bookmark-btn {
+    /* position: fixed; */
+    /* bottom: 0; */
+    /* right: 0; */
     background-color: transparent;
     border: 1px dashed rgba(var(--theme-color-rgb), 0.6);
     color: var(--theme-color);
@@ -395,12 +433,39 @@ input[type="checkbox"] {
     font-family: var(--ui-font);
     font-size: 1em;
     transition: all 0.3s ease;
+    width: max-content;
+    align-self: flex-end;
 }
 
 .add-bookmark-btn:hover {
     background-color: rgba(var(--theme-color-rgb), 0.1);
     border-style: solid;
     box-shadow: 0 0 10px rgba(var(--theme-color-rgb), 0.3);
+}
+
+/* Modal group */
+
+.modal-overlay-group{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(var(--bg-color-rgb), 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+    /* display: flex; */
+
+    display: none;
+    opacity: 0;
+
+}
+
+.modal-overlay-group.active {
+    display: flex;
+    opacity: 1;
 }
 
 /* Modal styles */
@@ -410,7 +475,7 @@ input[type="checkbox"] {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(var(--bg-color-rgb), 0.8);
+    background-color: rgba(var(--bg-color-rgb), 0.5);
     display: none;
     justify-content: center;
     align-items: center;
@@ -424,16 +489,20 @@ input[type="checkbox"] {
     opacity: 1;
 }
 
+#bookmarkgroupModal>.modal-content{
+    width: min(30rem, 50vw);
+}
+
 .modal-content {
-    background-color: rgba(var(--bg-color-rgb), 0.95);
-    padding: 30px;
-    border-radius: 12px;
+    background-color: rgba(var(--bg-color-rgb), 0.8);
+    padding: 2rem;
+    border-radius: 0.75rem;
     border: 1px solid var(--theme-color);
-    box-shadow: 0 0 30px rgba(var(--theme-color-rgb), 0.4);
+    /* box-shadow: 0 0 1.25rem rgba(var(--theme-color-rgb), 0.4); */
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    width: 300px;
+    gap: 1rem;
+    width: 20rem;
     font-family: var(--ui-font);
     transform: translateY(-20px);
     transition: transform 0.3s ease;
@@ -453,8 +522,8 @@ input[type="checkbox"] {
 .modal-content input {
     width: 100%;
     padding: 12px 15px;
-    background-color: rgba(var(--bg-color-rgb), 0.5);
-    border: 1px solid rgba(var(--theme-color-rgb), 0.5);
+    background-color: rgba(var(--bg-color-rgb), 0.6);
+    border: 1px solid rgba(var(--theme-color-rgb), 0.6);
     border-radius: 6px;
     color: var(--theme-color);
     font-family: var(--ui-font);
@@ -502,4 +571,68 @@ input[type="checkbox"] {
 
 .btn-cancel:hover {
     background-color: rgba(var(--theme-color-rgb), 0.2);
+}
+
+#modalgroup{
+    display: flex;
+    gap: 0.25rem;
+}
+
+#groupBookmarkBtn{
+    background: none;
+    border: none;
+}
+
+#groupBookmarkBtn>i{
+    color: var(--theme-color);
+}
+
+#modalselect{
+    display: none;
+    background-color: rgba(var(--bg-color-rgb), 0.6);
+    border-radius: 6px;
+    border: 1px solid rgba(var(--theme-color-rgb), 0.75);
+    color: var(--theme-color);
+    padding: 12px 15px;
+    box-sizing: border-box;
+    text-decoration: none;
+    list-style: none;
+    width: 100%;
+    transition: all 0.3s ease;
+    min-height: auto;
+    max-height: 15rem;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+#modalselect.modalgroupactive{
+    display: block;
+    transition: all 0.3s ease;
+}
+
+#modalselect>li{
+    padding: 0.5rem 0;
+    word-wrap: break-word;
+    position: relative;
+    cursor: pointer;
+}
+
+#modalselect>li::after{
+    position: absolute;
+    content: '';
+    width: 100%;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background-color: var(--theme-color);
+    opacity: 0.5;
+}
+
+#modalselect>li:last-child::after{
+    width: 0%;
+}
+
+#modalselect>li:hover{
+    font-size: 1.125rem;
+    transition: all 0.3s ease;
 }
