@@ -621,7 +621,7 @@ input[type="checkbox"] {
     border: 1px solid var(--theme-color);
 }
 
-.btn-cancel {
+.btn-add-cancel {
     background-color: transparent;
     color: var(--theme-color);
     border: 1px solid rgba(var(--theme-color-rgb), 0.6);
@@ -638,7 +638,7 @@ input[type="checkbox"] {
     background-color: #fff;
 }
 
-.btn-cancel:hover {
+.btn-add-cancel:hover {
     background-color: rgba(var(--theme-color-rgb), 0.2);
 }
 

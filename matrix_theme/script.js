@@ -80,6 +80,7 @@
         cancelGroupBtnDelete: document.getElementById('cancelGroupBtnDelete'),
         deleteGrpOnly: document.getElementById('deleteGrpOnly'),
         deleteGrpAll: document.getElementById('deleteGrpAll'),
+        addBookmarkGroupBtn: document.getElementById('addBookmarkGroupBtn'),
     };
 
     const context = elements.canvas.getContext('2d');
@@ -469,6 +470,7 @@
         const fragment = document.createDocumentFragment();
         groupedBookmarks.forEach((bookmark) => fragment.appendChild(createBookmarkElement(bookmark)));
         elements.deleteBookmarkGroupBtn.dataset.value = group;
+        elements.addBookmarkGroupBtn.dataset.value = group;
         elements.groupNameModal.dataset.value = group;
         elements.groupNameModal.value = group;
         elements.bookmarksContainerGroup.replaceChildren(fragment);
@@ -527,6 +529,18 @@
         elements.bookmarkNameInput.focus();
     }
 
+    function addBookmarkModalFromGrp(grp) {
+        elements.bookmarkIdInput.value = '';
+        elements.bookmarkNameInput.value = '';
+        elements.bookmarkUrlInput.value = '';
+        setGroupInputState(grp);
+        elements.modalTitle.textContent = 'Add Bookmark';
+        elements.groupBookmarkBtn.style.display = "none";
+        elements.bookmarkModal.classList.add('active');
+        elements.bookmarkNameInput.focus();
+        elements.saveBookmarkBtn.dataset.value = "add_from_inside";
+    }
+  
     function closeBookmarkModal() {
         elements.bookmarkModal.classList.remove('active');
         elements.groupSelect.classList.remove('modalgroupactive');
@@ -542,6 +556,10 @@
         elements.bookmarkGroupModal.classList.remove('active');
     }
 
+    function addGroupModal(d) {
+      addBookmarkModalFromGrp(d.target.dataset.value);
+    }
+  
     function openDeleteGroupModal(d) {
       elements.deletegroupModal.classList.add('active');
       elements.deleteGrpOnly.dataset.value = d.target.dataset.value;
@@ -582,7 +600,6 @@
       renderBookmarks();
       
     }
- 
 
     function saveBookmark() {
         const id = elements.bookmarkIdInput.value;
@@ -620,6 +637,11 @@
         renderBookmarks();
         closeBookmarkModal();
 
+        if (elements.saveBookmarkBtn.dataset.value === "add_from_inside") {
+          renderGroupBookmarks(group);
+          return;
+        }
+        
         if (elements.bookmarkGroupModal.classList.contains('active')) {
             renderGroupBookmarks(previousGroup);
         }
@@ -801,6 +823,7 @@
         elements.deleteBookmarkGroupBtn.addEventListener('click', openDeleteGroupModal);
         elements.deleteGrpOnly.addEventListener('click', deleteGroupOnly);
         elements.deleteGrpAll.addEventListener('click', deleteGroupAll);
+        elements.addBookmarkGroupBtn.addEventListener('click', addGroupModal);
 
         elements.bookmarkModal.addEventListener('click', (event) => {
             if (event.target === elements.bookmarkModal) {
