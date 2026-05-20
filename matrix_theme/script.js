@@ -525,6 +525,9 @@
         }
 
         renderGroupOptions();
+        elements.saveBookmarkBtn.dataset.value = "add_from_outside";
+        elements.groupBookmarkBtn.style.display = "";
+        elements.groupSelect.style.display = "";
         elements.bookmarkModal.classList.add('active');
         elements.bookmarkNameInput.focus();
     }
@@ -536,6 +539,7 @@
         setGroupInputState(grp);
         elements.modalTitle.textContent = 'Add Bookmark';
         elements.groupBookmarkBtn.style.display = "none";
+        elements.groupSelect.style.display = "none";
         elements.bookmarkModal.classList.add('active');
         elements.bookmarkNameInput.focus();
         elements.saveBookmarkBtn.dataset.value = "add_from_inside";
