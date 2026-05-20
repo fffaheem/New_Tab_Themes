@@ -860,7 +860,7 @@
             });
         });
     }
-
+    console.log("Made by Mohammad Faheem Ahmad")
     async function init() {
         bindEvents();
         resizeCanvas();
