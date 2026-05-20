@@ -5,7 +5,7 @@
         settings: 'matrix_settings',
         bookmarks: 'matrix_bookmarks',
         search: 'matrix_search',
-        defaults: 'matrix_default'
+        configLoaded: 'matrix_config_loaded'
     };
 
     const DEFAULT_SETTINGS = {
@@ -21,6 +21,7 @@
         { id: '1', name: 'Google', url: 'https://google.com', group: '' },
         { id: '2', name: 'YouTube', url: 'https://youtube.com', group: '' }
     ];
+    const DEFAULT_SEARCH_ENGINE = 'https://www.google.com/search?q=';
 
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const MONTHS = [
@@ -57,7 +58,7 @@
         fontSizeSlider: document.getElementById('fontSizeSlider'),
         speedValue: document.getElementById('speedValue'),
         fontSizeValue: document.getElementById('fontSizeValue'),
-        resetSettingsBtn: document.getElementById('resetSettingsBtn'),
+        loadConfigBtn: document.getElementById('loadConfigBtn'),
         bookmarksContainer: document.getElementById('bookmarksContainer'),
         bookmarksContainerGroup: document.getElementById('bookmarksContainerGroup'),
         addBookmarkBtn: document.getElementById('addBookmarkBtn'),
@@ -86,12 +87,12 @@
     const context = elements.canvas.getContext('2d');
     const groupIcon = elements.groupBookmarkBtn.querySelector('i');
     const faviconCanvas = document.createElement('canvas');
-    const faviconContext = faviconCanvas.getContext('2d');
+    const faviconContext = faviconCanvas.getContext('2d', { willReadFrequently: true });
 
     const state = {
         settings: { ...DEFAULT_SETTINGS },
         bookmarks: cloneBookmarks(DEFAULT_BOOKMARKS),
-        searchEngine: 'https://www.google.com/search?q=',
+        searchEngine: DEFAULT_SEARCH_ENGINE,
         rainColor: DEFAULT_SETTINGS.themeColor,
         backgroundColor: DEFAULT_SETTINGS.backgroundColor,
         backgroundColorRgb: '0, 0, 0',
@@ -113,6 +114,27 @@
 
     function hasChromeRuntime() {
         return typeof chrome !== 'undefined' && Boolean(chrome.runtime?.getURL);
+    }
+
+    function canReadPackageDirectory() {
+        return typeof chrome !== 'undefined' && typeof chrome.runtime?.getPackageDirectoryEntry === 'function';
+    }
+
+    function packageFileExists(path) {
+        if (!canReadPackageDirectory()) {
+            return Promise.resolve(true);
+        }
+
+        return new Promise((resolve) => {
+            chrome.runtime.getPackageDirectoryEntry((root) => {
+                if (chrome.runtime.lastError || !root?.getFile) {
+                    resolve(true);
+                    return;
+                }
+
+                root.getFile(path, {}, () => resolve(true), () => resolve(false));
+            });
+        });
     }
 
     function parseStoredValue(value) {
@@ -149,42 +171,93 @@
         });
     }
 
-    async function loadConfigDefaults() {
+    async function readConfigFile() {
         try {
+            if (!(await packageFileExists('config.json'))) {
+                return null;
+            }
+
             const configUrl = hasChromeRuntime() ? chrome.runtime.getURL('config.json') : 'config.json';
             const response = await fetch(configUrl);
-            const config = await response.json();
-            const defaultMode = String(config.matrix_default ?? '').toLowerCase();
-
-            state.searchEngine = config.matrix_search || state.searchEngine;
-
-            if (defaultMode === 'true') {
-                await injectConfig(config, 'true');
-                return;
+            if (!response.ok) {
+                return null;
             }
 
-            const stored = await readStorage([STORAGE_KEYS.defaults]);
-            const storedDefaultMode = stored[STORAGE_KEYS.defaults] ?? 'once';
-
-            if (storedDefaultMode !== 'no') {
-                await injectConfig(config, 'no');
+            const configText = await response.text();
+            if (!configText.trim()) {
+                return null;
             }
-        } catch (error) {
-            console.error('Unable to load Matrix config.', error);
+
+            const config = JSON.parse(configText);
+            return config && typeof config === 'object' && !Array.isArray(config) ? config : null;
+        } catch {
+            return null;
         }
     }
 
-    function injectConfig(config, defaultMode) {
-        return writeStorage({
-            [STORAGE_KEYS.settings]: config.matrix_settings,
-            [STORAGE_KEYS.bookmarks]: config.matrix_bookmarks,
-            [STORAGE_KEYS.search]: config.matrix_search,
-            [STORAGE_KEYS.defaults]: defaultMode
+    function getConfigData(config) {
+        const configSettings =
+            config?.matrix_settings && typeof config.matrix_settings === 'object' && !Array.isArray(config.matrix_settings)
+                ? config.matrix_settings
+                : {};
+        const configBookmarks = Array.isArray(config?.matrix_bookmarks)
+            ? cloneBookmarks(config.matrix_bookmarks)
+            : cloneBookmarks(DEFAULT_BOOKMARKS);
+        const configSearch =
+            typeof config?.matrix_search === 'string' && config.matrix_search.trim()
+                ? config.matrix_search
+                : DEFAULT_SEARCH_ENGINE;
+
+        return {
+            settings: { ...DEFAULT_SETTINGS, ...configSettings },
+            bookmarks: configBookmarks,
+            search: configSearch
+        };
+    }
+
+    async function applyConfig(config) {
+        const configData = getConfigData(config);
+
+        state.settings = configData.settings;
+        state.bookmarks = configData.bookmarks;
+        state.searchEngine = configData.search;
+
+        await writeStorage({
+            [STORAGE_KEYS.settings]: state.settings,
+            [STORAGE_KEYS.bookmarks]: state.bookmarks,
+            [STORAGE_KEYS.search]: state.searchEngine
         });
     }
 
+    async function loadInitialConfigOnce() {
+        const stored = await readStorage([
+            STORAGE_KEYS.configLoaded,
+            STORAGE_KEYS.settings,
+            STORAGE_KEYS.bookmarks,
+            STORAGE_KEYS.search
+        ]);
+
+        if (stored[STORAGE_KEYS.configLoaded]) {
+            return;
+        }
+
+        if (stored[STORAGE_KEYS.settings] || stored[STORAGE_KEYS.bookmarks] || stored[STORAGE_KEYS.search]) {
+            await writeStorage({ [STORAGE_KEYS.configLoaded]: true });
+            return;
+        }
+
+        await applyConfig(await readConfigFile());
+        await writeStorage({ [STORAGE_KEYS.configLoaded]: true });
+    }
+
+    async function loadConfigFromMenu() {
+        await applyConfig(await readConfigFile());
+        applySettings();
+        renderBookmarks();
+    }
+
     async function loadDataFromStorage() {
-        const stored = await readStorage([STORAGE_KEYS.bookmarks, STORAGE_KEYS.settings]);
+        const stored = await readStorage([STORAGE_KEYS.bookmarks, STORAGE_KEYS.settings, STORAGE_KEYS.search]);
 
         state.bookmarks = Array.isArray(stored[STORAGE_KEYS.bookmarks])
             ? stored[STORAGE_KEYS.bookmarks]
@@ -194,6 +267,10 @@
             ...DEFAULT_SETTINGS,
             ...(stored[STORAGE_KEYS.settings] || {})
         };
+        state.searchEngine =
+            typeof stored[STORAGE_KEYS.search] === 'string' && stored[STORAGE_KEYS.search].trim()
+                ? stored[STORAGE_KEYS.search]
+                : DEFAULT_SEARCH_ENGINE;
     }
 
     function saveSettingsToStorage() {
@@ -791,10 +868,13 @@
 
         elements.fontSizeSlider.addEventListener('change', saveSettingsToStorage);
 
-        elements.resetSettingsBtn?.addEventListener('click', () => {
-            state.settings = { ...DEFAULT_SETTINGS };
-            saveSettingsToStorage();
-            applySettings();
+        elements.loadConfigBtn?.addEventListener('click', async () => {
+            elements.loadConfigBtn.disabled = true;
+            try {
+                await loadConfigFromMenu();
+            } finally {
+                elements.loadConfigBtn.disabled = false;
+            }
         });
 
         elements.timeFormatToggle.addEventListener('change', (event) => {
@@ -868,7 +948,7 @@
     async function init() {
         bindEvents();
         resizeCanvas();
-        await loadConfigDefaults();
+        await loadInitialConfigOnce();
         await loadDataFromStorage();
         applySettings();
         renderBookmarks();

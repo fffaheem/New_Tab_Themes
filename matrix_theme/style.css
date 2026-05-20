@@ -92,7 +92,7 @@ canvas {
     color: var(--theme-color);
 }
 
-.reset-control-group {
+.config-control-group {
     justify-content: center;
     margin-top: 10px;
 }
@@ -449,7 +449,7 @@ input[type="checkbox"] {
     box-shadow: 0 0 10px rgba(var(--theme-color-rgb), 0.3);
 }
 
-.reset-settings-btn {
+.load-config-btn {
     width: 100%;
     border-style: solid;
     padding: 8px;

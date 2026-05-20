@@ -1,14 +1,12 @@
 {
-  "info": "matrix_default: 'true' = always load, 'once' = load once, 'no' = disable",
-  "matrix_default" : "once",
   "matrix_search" : "https://www.google.com/search?q=",
   "matrix_settings": {
     "animationSpeed": 12,
-    "backgroundColor": "#181818",
+    "backgroundColor": "#000000",
     "fontSize": 25,
     "is24HourFormat": false,
     "showSeconds": false,
-    "themeColor": "#7c7c7c"
+    "themeColor": "#00FF41"
   },"matrix_bookmarks":
     [
       { "id": "1", "name": "Google", "url": "https://google.com", "group": "" },

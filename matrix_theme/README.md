@@ -124,8 +124,6 @@ Example:
 
 ```json
 {
-  "info": "matrix_default: 'true' = always load, 'once' = load once, 'no' = disable",
-  "matrix_default": "true",
   "matrix_search": "https://www.google.com/search?q=",
   "matrix_settings": {
     "animationSpeed": 18,
@@ -151,6 +149,7 @@ Example:
   ]
 }
 ```
+After editing, load the config from the hamburger menu
 
 ---
 
