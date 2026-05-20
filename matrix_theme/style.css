@@ -604,6 +604,8 @@ input[type="checkbox"] {
     display: flex;
     justify-content: space-between;
     margin-top: 15px;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .modal-actions button {
@@ -649,6 +651,7 @@ input[type="checkbox"] {
 .modal-actions-group-btns{
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 #modalgroup{
