@@ -104,7 +104,7 @@
 
     let resizeFrame = null;
     let draggedItem = null;
-    let didDrag = false;
+    let suppressClickUntil = 0;
 
     function cloneBookmarks(bookmarks) {
         return bookmarks.map((bookmark) => ({ ...bookmark }));
@@ -905,10 +905,9 @@
     }
 
     function handleBookmarkContainerClick(event) {
-        if (didDrag) {
+        if (Date.now() < suppressClickUntil) {
             event.preventDefault();
             event.stopPropagation();
-            didDrag = false;
             return;
         }
 
@@ -952,7 +951,7 @@
         }
 
         draggedItem = itemData;
-        didDrag = false;
+        suppressClickUntil = 0;
         item.classList.add('dragging');
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', itemData.id);
@@ -1001,7 +1000,7 @@
             return;
         }
 
-        didDrag = true;
+        suppressClickUntil = Date.now() + 250;
         saveBookmarksToStorage();
         renderBookmarks();
 
