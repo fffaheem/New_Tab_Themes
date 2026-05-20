@@ -103,6 +103,8 @@
     };
 
     let resizeFrame = null;
+    let draggedItem = null;
+    let didDrag = false;
 
     function cloneBookmarks(bookmarks) {
         return bookmarks.map((bookmark) => ({ ...bookmark }));
@@ -475,6 +477,131 @@
         return [...new Set(state.bookmarks.map(({ group }) => normalizeGroup(group)).filter((group) => !isUngrouped(group)))];
     }
 
+    function getBookmarkGroup(bookmark) {
+        return normalizeGroup(bookmark.group);
+    }
+
+    function getTopLevelItems() {
+        const seenGroups = new Set();
+        const items = [];
+
+        state.bookmarks.forEach((bookmark) => {
+            const group = getBookmarkGroup(bookmark);
+
+            if (isUngrouped(group)) {
+                items.push({ type: 'bookmark', id: bookmark.id });
+                return;
+            }
+
+            if (!seenGroups.has(group)) {
+                seenGroups.add(group);
+                items.push({ type: 'group', id: group });
+            }
+        });
+
+        return items;
+    }
+
+    function findTopLevelItemFromElement(element) {
+        if (!element) {
+            return null;
+        }
+
+        if (element.classList.contains('open-folder')) {
+            return { type: 'group', id: element.dataset.value };
+        }
+
+        if (element.classList.contains('bookmark-item')) {
+            return { type: 'bookmark', id: element.dataset.id };
+        }
+
+        return null;
+    }
+
+    function itemMatches(item, type, id) {
+        return item.type === type && item.id === id;
+    }
+
+    function swapArrayItems(items, sourceIndex, targetIndex) {
+        const nextItems = [...items];
+        [nextItems[sourceIndex], nextItems[targetIndex]] = [nextItems[targetIndex], nextItems[sourceIndex]];
+        return nextItems;
+    }
+
+    function swapTopLevelItems(source, target) {
+        if (!target) {
+            return false;
+        }
+
+        const topLevelItems = getTopLevelItems();
+        const sourceIndex = topLevelItems.findIndex((item) => itemMatches(item, source.type, source.id));
+        const targetIndex = topLevelItems.findIndex((item) => itemMatches(item, target.type, target.id));
+
+        if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
+            return false;
+        }
+
+        const reorderedItems = swapArrayItems(topLevelItems, sourceIndex, targetIndex);
+        const bookmarkMap = new Map(state.bookmarks.map((bookmark) => [bookmark.id, bookmark]));
+        const groupMap = new Map();
+
+        state.bookmarks.forEach((bookmark) => {
+            const group = getBookmarkGroup(bookmark);
+            if (!isUngrouped(group)) {
+                groupMap.set(group, [...(groupMap.get(group) || []), bookmark]);
+            }
+        });
+
+        state.bookmarks = reorderedItems.flatMap((item) => {
+            if (item.type === 'bookmark') {
+                const bookmark = bookmarkMap.get(item.id);
+                return bookmark ? [bookmark] : [];
+            }
+
+            return groupMap.get(item.id) || [];
+        });
+
+        return true;
+    }
+
+    function swapGroupBookmarks(sourceId, targetId, group) {
+        if (!targetId) {
+            return false;
+        }
+
+        const normalizedGroup = normalizeGroup(group);
+        const groupedBookmarks = state.bookmarks.filter((bookmark) => getBookmarkGroup(bookmark) === normalizedGroup);
+        const sourceIndex = groupedBookmarks.findIndex((bookmark) => bookmark.id === sourceId);
+        const targetIndex = groupedBookmarks.findIndex((bookmark) => bookmark.id === targetId);
+
+        if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
+            return false;
+        }
+
+        const reorderedGroup = swapArrayItems(groupedBookmarks, sourceIndex, targetIndex);
+        let insertedGroup = false;
+
+        state.bookmarks = state.bookmarks.flatMap((bookmark) => {
+            if (getBookmarkGroup(bookmark) !== normalizedGroup) {
+                return [bookmark];
+            }
+
+            if (insertedGroup) {
+                return [];
+            }
+
+            insertedGroup = true;
+            return reorderedGroup;
+        });
+
+        return true;
+    }
+
+    function setDropTarget(target) {
+        document.querySelectorAll('.bookmark-item.drop-target').forEach((item) => item.classList.remove('drop-target'));
+        target?.classList.add('drop-target');
+    }
+
     function createBookmarkElement(bookmark) {
         const link = document.createElement('a');
         const icon = document.createElement('i');
@@ -485,6 +612,10 @@
 
         link.href = bookmark.url;
         link.className = 'bookmark-item';
+        link.draggable = true;
+        link.dataset.id = bookmark.id;
+        link.dataset.type = 'bookmark';
+        link.dataset.group = normalizeGroup(bookmark.group);
 
         icon.className = 'fas fa-globe favicon';
         label.textContent = bookmark.name;
@@ -512,6 +643,8 @@
         const label = document.createElement('span');
 
         folder.className = 'bookmark-item open-folder';
+        folder.draggable = true;
+        folder.dataset.type = 'group';
         folder.dataset.value = group;
 
         icon.className = 'fa fa-folder';
@@ -525,19 +658,23 @@
     function renderBookmarks() {
         const fragment = document.createDocumentFragment();
 
-        state.bookmarks.filter(({ group }) => isUngrouped(group)).forEach((bookmark) => {
-            fragment.appendChild(createBookmarkElement(bookmark));
-        });
+        getTopLevelItems().forEach((item) => {
+            if (item.type === 'group') {
+                fragment.appendChild(createGroupElement(item.id));
+                return;
+            }
 
-        getDistinctGroups().forEach((group) => {
-            fragment.appendChild(createGroupElement(group));
+            const bookmark = state.bookmarks.find(({ id }) => id === item.id);
+            if (bookmark) {
+                fragment.appendChild(createBookmarkElement(bookmark));
+            }
         });
 
         elements.bookmarksContainer.replaceChildren(fragment);
     }
 
     function renderGroupBookmarks(group) {
-        const groupedBookmarks = state.bookmarks.filter((bookmark) => bookmark.group === group);
+        const groupedBookmarks = state.bookmarks.filter((bookmark) => getBookmarkGroup(bookmark) === normalizeGroup(group));
 
         if (!groupedBookmarks.length) {
             closeGroupModal();
@@ -657,7 +794,7 @@
       }
       let group = elements.deleteGrpOnly.dataset.value
       state.bookmarks.forEach((bookmark) => {
-          if (bookmark.group === group) {
+          if (getBookmarkGroup(bookmark) === normalizeGroup(group)) {
               bookmark.group = "";
           }
       });
@@ -672,7 +809,7 @@
         return;
       }
       let group = elements.deleteGrpOnly.dataset.value
-      const otherBookmarks = state.bookmarks.filter((bookmark) => bookmark.group !== group);
+      const otherBookmarks = state.bookmarks.filter((bookmark) => getBookmarkGroup(bookmark) !== normalizeGroup(group));
       state.bookmarks = otherBookmarks
 
       saveBookmarksToStorage();
@@ -738,7 +875,7 @@
         }
 
         state.bookmarks.forEach((bookmark) => {
-            if (bookmark.group === currentGroup) {
+            if (getBookmarkGroup(bookmark) === normalizeGroup(currentGroup)) {
                 bookmark.group = nextGroup;
             }
         });
@@ -768,6 +905,13 @@
     }
 
     function handleBookmarkContainerClick(event) {
+        if (didDrag) {
+            event.preventDefault();
+            event.stopPropagation();
+            didDrag = false;
+            return;
+        }
+
         const editButton = event.target.closest('.edit-btn');
         if (editButton) {
             event.preventDefault();
@@ -790,6 +934,86 @@
             event.stopPropagation();
             openGroupModal(folder.dataset.value);
         }
+    }
+
+    function handleBookmarkDragStart(event) {
+        const item = event.target.closest('.bookmark-item');
+        if (!item) {
+            return;
+        }
+
+        const insideGroup = event.currentTarget === elements.bookmarksContainerGroup;
+        const itemData = insideGroup
+            ? { type: 'bookmark', id: item.dataset.id, group: item.dataset.group, scope: 'group' }
+            : { ...findTopLevelItemFromElement(item), scope: 'top' };
+
+        if (!itemData?.id) {
+            return;
+        }
+
+        draggedItem = itemData;
+        didDrag = false;
+        item.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', itemData.id);
+    }
+
+    function handleBookmarkDragOver(event) {
+        if (!draggedItem) {
+            return;
+        }
+
+        const insideGroup = event.currentTarget === elements.bookmarksContainerGroup;
+        if ((insideGroup && draggedItem.scope !== 'group') || (!insideGroup && draggedItem.scope !== 'top')) {
+            return;
+        }
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        const targetItem = event.target.closest('.bookmark-item');
+        const containedTarget = targetItem && event.currentTarget.contains(targetItem) ? targetItem : null;
+
+        setDropTarget(containedTarget);
+    }
+
+    function handleBookmarkDrop(event) {
+        if (!draggedItem) {
+            return;
+        }
+
+        const insideGroup = event.currentTarget === elements.bookmarksContainerGroup;
+        if ((insideGroup && draggedItem.scope !== 'group') || (!insideGroup && draggedItem.scope !== 'top')) {
+            return;
+        }
+
+        event.preventDefault();
+        const targetElement = event.target.closest('.bookmark-item');
+        let changed = false;
+
+        if (insideGroup) {
+            const targetId = targetElement?.dataset.id || null;
+            changed = swapGroupBookmarks(draggedItem.id, targetId, draggedItem.group);
+        } else {
+            changed = swapTopLevelItems(draggedItem, findTopLevelItemFromElement(targetElement));
+        }
+
+        if (!changed) {
+            return;
+        }
+
+        didDrag = true;
+        saveBookmarksToStorage();
+        renderBookmarks();
+
+        if (insideGroup) {
+            renderGroupBookmarks(draggedItem.group);
+        }
+    }
+
+    function handleBookmarkDragEnd() {
+        document.querySelectorAll('.bookmark-item.dragging').forEach((item) => item.classList.remove('dragging'));
+        setDropTarget(null);
+        draggedItem = null;
     }
 
     function handleSearchSubmit(event) {
@@ -896,6 +1120,14 @@
         elements.searchField.addEventListener('keydown', handleSearchSubmit);
         elements.bookmarksContainer.addEventListener('click', handleBookmarkContainerClick);
         elements.bookmarksContainerGroup.addEventListener('click', handleBookmarkContainerClick);
+        elements.bookmarksContainer.addEventListener('dragstart', handleBookmarkDragStart);
+        elements.bookmarksContainerGroup.addEventListener('dragstart', handleBookmarkDragStart);
+        elements.bookmarksContainer.addEventListener('dragover', handleBookmarkDragOver);
+        elements.bookmarksContainerGroup.addEventListener('dragover', handleBookmarkDragOver);
+        elements.bookmarksContainer.addEventListener('drop', handleBookmarkDrop);
+        elements.bookmarksContainerGroup.addEventListener('drop', handleBookmarkDrop);
+        elements.bookmarksContainer.addEventListener('dragend', handleBookmarkDragEnd);
+        elements.bookmarksContainerGroup.addEventListener('dragend', handleBookmarkDragEnd);
         elements.addBookmarkBtn.addEventListener('click', () => openBookmarkModal());
         elements.cancelBookmarkBtn.addEventListener('click', closeBookmarkModal);
         elements.cancelBookmarkGroupBtn.addEventListener('click', closeGroupModal);

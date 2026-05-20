@@ -39,6 +39,10 @@ A sleek Matrix-inspired new tab page for Chromium-based browsers featuring digit
 - Custom background color support
 - Built-in search bar
 - Quick-access bookmarks
+- Bookmark folders using groups
+- Drag-and-switch bookmark sorting
+- Persistent bookmark order
+- Configurable default bookmarks and order
 - Clean terminal-inspired interface
 - Multiple theme variations
 - Lightweight and fast performance
@@ -114,11 +118,15 @@ Your changes will apply instantly.
 
 ## Manual Configuration
 
-You can manually edit the settings, default bookmarks, and search engine.
+You can manually edit the settings, default bookmarks, bookmark groups, bookmark order, and search engine.
 
 Locate the `config.json` file and modify the entries as needed.
 
 Make sure each bookmark `id` is unique.
+
+Bookmark order is controlled by the order of items in the `matrix_bookmarks` array. The `id` is only used to identify a bookmark; changing an `id` does not sort it.
+
+To create a folder, give multiple bookmarks the same `group` value. Bookmarks with an empty `group` appear outside folders. Inside a folder, bookmarks follow the same array order.
 
 Example:
 
@@ -145,11 +153,26 @@ Example:
       "name": "YouTube",
       "url": "https://youtube.com",
       "group": ""
+    },
+    {
+      "id": "3",
+      "name": "GitHub",
+      "url": "https://github.com",
+      "group": "Dev"
+    },
+    {
+      "id": "4",
+      "name": "MDN",
+      "url": "https://developer.mozilla.org",
+      "group": "Dev"
     }
   ]
 }
 ```
-After editing, load the config from the hamburger menu
+
+In this example, Google and YouTube appear as regular bookmarks. GitHub and MDN appear inside the `Dev` folder, in that order. Move an item earlier or later in `matrix_bookmarks` to change its default position.
+
+After editing, load the config from the hamburger menu.
 
 ---
 
