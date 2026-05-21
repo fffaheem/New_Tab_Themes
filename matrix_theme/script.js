@@ -1016,35 +1016,62 @@
         draggedItem = null;
     }
 
-    function handleSearchSubmit(event) {
+    const SearchButton = {
+        enable() {
+            elements.search_icon.classList.add("typed");
+            elements.searchField.classList.add("input-typed");
+    
+            elements.search_icon.onclick = () => {
+                handleEnter({ key: "Enter" });
+            };
+        },
+    
+        disable() {
+            elements.search_icon.classList.remove("typed");
+            elements.searchField.classList.remove("input-typed");
+    
+            elements.search_icon.onclick = null;
+        }
+    };
+  
+    function handleSearchMouse(event) {
+      if (event.type == "paste") {
+        SearchButton.enable();
+        return;
+      }
+      // for cut
+      const cutText = window.getSelection().toString();
+      if (cutText === elements.searchField.value) {
+        SearchButton.disable();
+      }
+    }
+
+    function handleEnter(event) {  
+      if (event.key !== 'Enter') {
+          return;
+      }
+
+      const query = elements.searchField.value.trim();
+      if (!query) {
+          return;
+      }
+
+      if (URL_PATTERN.test(query) && !query.includes(' ')) {
+          window.location.href =
+              query.startsWith('http://') || query.startsWith('https://') ? query : `https://${query}`;
+          return;
+      }
+
+      window.location.href = `${state.searchEngine}${encodeURIComponent(query)}`;
+    
+    }
+  
+    function handleSearchInput(event) {
         if (elements.searchField.value.length < 1) {
-          elements.search_icon.classList.remove("typed");
-          elements.searchField.classList.remove("input-typed")
-          elements.search_icon.onclick = null;
+          SearchButton.disable();
         } else {
-          elements.search_icon.classList.add("typed");
-          elements.searchField.classList.add("input-typed")
-          elements.search_icon.onclick = () => {
-            handleSearchSubmit({key: "Enter" });
-          };
+          SearchButton.enable();
         }
-        
-        if (event.key !== 'Enter') {
-            return;
-        }
-
-        const query = elements.searchField.value.trim();
-        if (!query) {
-            return;
-        }
-
-        if (URL_PATTERN.test(query) && !query.includes(' ')) {
-            window.location.href =
-                query.startsWith('http://') || query.startsWith('https://') ? query : `https://${query}`;
-            return;
-        }
-
-        window.location.href = `${state.searchEngine}${encodeURIComponent(query)}`;
     }
 
     function toggleGroupSelect() {
@@ -1129,7 +1156,10 @@
             elements.matrixControls.classList.toggle('hidden');
         });
 
-        elements.searchField.addEventListener('keyup', handleSearchSubmit);
+        elements.searchField.addEventListener('cut', handleSearchMouse);
+        elements.searchField.addEventListener('paste', handleSearchMouse);
+        elements.searchField.addEventListener('input', handleSearchInput);
+        elements.searchField.addEventListener('keyup', handleEnter);
         elements.bookmarksContainer.addEventListener('click', handleBookmarkContainerClick);
         elements.bookmarksContainerGroup.addEventListener('click', handleBookmarkContainerClick);
         elements.bookmarksContainer.addEventListener('dragstart', handleBookmarkDragStart);
