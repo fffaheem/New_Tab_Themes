@@ -82,6 +82,7 @@
         deleteGrpOnly: document.getElementById('deleteGrpOnly'),
         deleteGrpAll: document.getElementById('deleteGrpAll'),
         addBookmarkGroupBtn: document.getElementById('addBookmarkGroupBtn'),
+        search_icon: document.querySelector('.search-icon'),
     };
 
     const context = elements.canvas.getContext('2d');
@@ -1016,6 +1017,18 @@
     }
 
     function handleSearchSubmit(event) {
+        if (elements.searchField.value.length < 1) {
+          elements.search_icon.classList.remove("typed");
+          elements.searchField.classList.remove("input-typed")
+          elements.search_icon.onclick = null;
+        } else {
+          elements.search_icon.classList.add("typed");
+          elements.searchField.classList.add("input-typed")
+          elements.search_icon.onclick = () => {
+            handleSearchSubmit({key: "Enter" });
+          };
+        }
+        
         if (event.key !== 'Enter') {
             return;
         }
@@ -1116,7 +1129,7 @@
             elements.matrixControls.classList.toggle('hidden');
         });
 
-        elements.searchField.addEventListener('keydown', handleSearchSubmit);
+        elements.searchField.addEventListener('keyup', handleSearchSubmit);
         elements.bookmarksContainer.addEventListener('click', handleBookmarkContainerClick);
         elements.bookmarksContainerGroup.addEventListener('click', handleBookmarkContainerClick);
         elements.bookmarksContainer.addEventListener('dragstart', handleBookmarkDragStart);
