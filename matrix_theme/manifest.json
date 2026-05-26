@@ -1,5 +1,5 @@
 {
-  "manifest_version": 4,
+  "manifest_version": 3,
   "name": "Matrix New Tab",
   "version": "2.1",
   "description": "A custom new tab page featuring a Matrix digital rain effect with a built-in search bar and bookmarks.",
