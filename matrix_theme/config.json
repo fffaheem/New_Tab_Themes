@@ -1,5 +1,5 @@
 {
-  "matrix_search" : "https://www.google.com/search?q=",
+  "matrix_search": "https://www.google.com/search?q=",
   "matrix_settings": {
     "animationSpeed": 12,
     "backgroundColor": "#000000",
@@ -7,9 +7,19 @@
     "is24HourFormat": false,
     "showSeconds": false,
     "themeColor": "#00FF41"
-  },"matrix_bookmarks":
-    [
-      { "id": "1", "name": "Google", "url": "https://google.com", "group": "" },
-      { "id": "2", "name": "YouTube", "url": "https://youtube.com", "group": "" }
-    ]
+  },
+  "matrix_bookmarks": [
+    {
+      "id": "1",
+      "name": "Google",
+      "url": "https://google.com",
+      "group": ""
+    },
+    {
+      "id": "2",
+      "name": "YouTube",
+      "url": "https://youtube.com",
+      "group": ""
+    }
+  ]
 }

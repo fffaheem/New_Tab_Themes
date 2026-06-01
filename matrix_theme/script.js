@@ -3,7 +3,6 @@
 
     const STORAGE_KEYS = {
         settings: 'matrix_settings',
-        bookmarks: 'matrix_bookmarks',
         search: 'matrix_search',
         configLoaded: 'matrix_config_loaded'
     };
@@ -111,6 +110,73 @@
         return bookmarks.map((bookmark) => ({ ...bookmark }));
     }
 
+    function hasChromeBookmarks() {
+        return typeof chrome !== 'undefined' && Boolean(chrome.bookmarks);
+    }
+
+    async function fetchChromeBookmarks() {
+        if (!hasChromeBookmarks()) return cloneBookmarks(DEFAULT_BOOKMARKS);
+        
+        return new Promise((resolve) => {
+            chrome.bookmarks.getSubTree("1", (results) => {
+                if (chrome.runtime.lastError || !results || !results.length) {
+                    resolve([]);
+                    return;
+                }
+                
+                const bookmarks = [];
+                const children = results[0].children || [];
+                
+                function processNode(node, currentGroup) {
+                    if (node.url) {
+                        bookmarks.push({
+                            id: node.id,
+                            name: node.title,
+                            url: node.url,
+                            group: currentGroup
+                        });
+                    } else if (node.children && node.children.length) {
+                        // Always use top-level folder name as the group (flatten deeper nesting)
+                        const groupName = currentGroup || node.title;
+                        node.children.forEach(child => processNode(child, groupName));
+                    }
+                }
+                
+                children.forEach(child => processNode(child, ""));
+                resolve(bookmarks);
+            });
+        });
+    }
+    
+    async function findFolderIdByName(folderName) {
+        if (!folderName || !hasChromeBookmarks()) return null;
+        return new Promise((resolve) => {
+            chrome.bookmarks.getChildren("1", (children) => {
+                if (chrome.runtime.lastError || !children) { resolve(null); return; }
+                const folder = children.find(c => !c.url && c.title === folderName);
+                resolve(folder ? folder.id : null);
+            });
+        });
+    }
+
+    async function getOrCreateFolderId(folderName) {
+        if (!folderName || !hasChromeBookmarks()) return "1";
+        return new Promise((resolve) => {
+            chrome.bookmarks.getChildren("1", (children) => {
+                if (chrome.runtime.lastError || !children) { resolve("1"); return; }
+                const folder = children.find(c => !c.url && c.title === folderName);
+                if (folder) {
+                    resolve(folder.id);
+                } else {
+                    chrome.bookmarks.create({ parentId: "1", title: folderName }, (newFolder) => {
+                        if (chrome.runtime.lastError || !newFolder) { resolve("1"); return; }
+                        resolve(newFolder.id);
+                    });
+                }
+            });
+        });
+    }
+
     function hasChromeStorage() {
         return typeof chrome !== 'undefined' && Boolean(chrome.storage?.local);
     }
@@ -203,40 +269,77 @@
             config?.matrix_settings && typeof config.matrix_settings === 'object' && !Array.isArray(config.matrix_settings)
                 ? config.matrix_settings
                 : {};
-        const configBookmarks = Array.isArray(config?.matrix_bookmarks)
-            ? cloneBookmarks(config.matrix_bookmarks)
-            : cloneBookmarks(DEFAULT_BOOKMARKS);
         const configSearch =
             typeof config?.matrix_search === 'string' && config.matrix_search.trim()
                 ? config.matrix_search
                 : DEFAULT_SEARCH_ENGINE;
+        const configBookmarks = Array.isArray(config?.matrix_bookmarks) ? cloneBookmarks(config.matrix_bookmarks) : [];
 
         return {
             settings: { ...DEFAULT_SETTINGS, ...configSettings },
-            bookmarks: configBookmarks,
-            search: configSearch
+            search: configSearch,
+            bookmarks: configBookmarks
         };
     }
 
-    async function applyConfig(config) {
+    async function clearAllBookmarksBar() {
+        if (!hasChromeBookmarks()) return;
+        return new Promise((resolve) => {
+            chrome.bookmarks.getChildren("1", (children) => {
+                if (chrome.runtime.lastError || !children || !children.length) { resolve(); return; }
+                let removed = 0;
+                const total = children.length;
+                children.forEach(child => {
+                    // Use removeTree for folders, remove for bookmarks
+                    const removeFn = child.url ? chrome.bookmarks.remove : chrome.bookmarks.removeTree;
+                    removeFn.call(chrome.bookmarks, child.id, () => {
+                        if (chrome.runtime.lastError) {
+                            console.warn('Could not remove:', child.title, chrome.runtime.lastError.message);
+                        }
+                        removed++;
+                        if (removed === total) resolve();
+                    });
+                });
+            });
+        });
+    }
+
+    async function applyConfig(config, wipeFirst = false) {
         const configData = getConfigData(config);
 
         state.settings = configData.settings;
-        state.bookmarks = configData.bookmarks;
         state.searchEngine = configData.search;
 
         await writeStorage({
             [STORAGE_KEYS.settings]: state.settings,
-            [STORAGE_KEYS.bookmarks]: state.bookmarks,
             [STORAGE_KEYS.search]: state.searchEngine
         });
+        
+        if (hasChromeBookmarks()) {
+            if (wipeFirst) {
+                // Destructive reset: clear everything from Bookmarks Bar first
+                await clearAllBookmarksBar();
+            }
+
+            if (configData.bookmarks && configData.bookmarks.length > 0) {
+                for (const bookmark of configData.bookmarks) {
+                    const parentId = await getOrCreateFolderId(bookmark.group);
+                    await new Promise((resolve) => {
+                        chrome.bookmarks.create({ parentId, title: bookmark.name, url: bookmark.url }, (result) => {
+                            if (chrome.runtime.lastError) { resolve(null); return; }
+                            resolve(result);
+                        });
+                    });
+                }
+            }
+            state.bookmarks = await fetchChromeBookmarks();
+        }
     }
 
     async function loadInitialConfigOnce() {
         const stored = await readStorage([
             STORAGE_KEYS.configLoaded,
             STORAGE_KEYS.settings,
-            STORAGE_KEYS.bookmarks,
             STORAGE_KEYS.search
         ]);
 
@@ -244,27 +347,61 @@
             return;
         }
 
-        if (stored[STORAGE_KEYS.settings] || stored[STORAGE_KEYS.bookmarks] || stored[STORAGE_KEYS.search]) {
+        if (stored[STORAGE_KEYS.settings] || stored[STORAGE_KEYS.search]) {
             await writeStorage({ [STORAGE_KEYS.configLoaded]: true });
             return;
         }
 
-        await applyConfig(await readConfigFile());
+        // First run: apply config silently without wiping (Bookmarks Bar is presumably already set up)
+        await applyConfig(await readConfigFile(), false);
         await writeStorage({ [STORAGE_KEYS.configLoaded]: true });
     }
 
     async function loadConfigFromMenu() {
-        await applyConfig(await readConfigFile());
+        const config = await readConfigFile();
+        if (!config) {
+            alert('⚠️ Could not read config.json.\nMake sure the file exists and is valid JSON.');
+            return;
+        }
+
+        const configData = getConfigData(config);
+        const configBookmarkCount = configData.bookmarks.length;
+
+        // Count what's currently in the Bookmarks Bar
+        let currentCount = 0;
+        if (hasChromeBookmarks()) {
+            currentCount = await new Promise(resolve => {
+                chrome.bookmarks.getChildren("1", (children) => {
+                    if (chrome.runtime.lastError || !children) { resolve(0); return; }
+                    resolve(children.length);
+                });
+            });
+        }
+
+        const warningLines = [
+            '⚠️  WARNING: Load Config will REPLACE all your bookmarks!',
+            '',
+            currentCount > 0
+                ? `  • ${currentCount} item(s) currently in your Bookmarks Bar will be permanently deleted.`
+                : '  • Your Bookmarks Bar is already empty.',
+            configBookmarkCount > 0
+                ? `  • ${configBookmarkCount} bookmark(s) from config.json will be added.`
+                : '  • config.json has no bookmarks — your Bookmarks Bar will be left empty.',
+            '',
+            'This cannot be undone. Continue?'
+        ];
+
+        if (!confirm(warningLines.join('\n'))) {
+            return;
+        }
+
+        await applyConfig(config, true /* wipeFirst */);
         applySettings();
         renderBookmarks();
     }
 
     async function loadDataFromStorage() {
-        const stored = await readStorage([STORAGE_KEYS.bookmarks, STORAGE_KEYS.settings, STORAGE_KEYS.search]);
-
-        state.bookmarks = Array.isArray(stored[STORAGE_KEYS.bookmarks])
-            ? stored[STORAGE_KEYS.bookmarks]
-            : cloneBookmarks(DEFAULT_BOOKMARKS);
+        const stored = await readStorage([STORAGE_KEYS.settings, STORAGE_KEYS.search]);
 
         state.settings = {
             ...DEFAULT_SETTINGS,
@@ -274,6 +411,8 @@
             typeof stored[STORAGE_KEYS.search] === 'string' && stored[STORAGE_KEYS.search].trim()
                 ? stored[STORAGE_KEYS.search]
                 : DEFAULT_SEARCH_ENGINE;
+                
+        state.bookmarks = await fetchChromeBookmarks();
     }
 
     function saveSettingsToStorage() {
@@ -281,7 +420,7 @@
     }
 
     function saveBookmarksToStorage() {
-        writeStorage({ [STORAGE_KEYS.bookmarks]: state.bookmarks });
+        // No-op: Bookmarks are saved directly to chrome.bookmarks
     }
 
     function hexToRgb(hex) {
@@ -529,73 +668,51 @@
         return nextItems;
     }
 
-    function swapTopLevelItems(source, target) {
-        if (!target) {
-            return false;
-        }
-
-        const topLevelItems = getTopLevelItems();
-        const sourceIndex = topLevelItems.findIndex((item) => itemMatches(item, source.type, source.id));
-        const targetIndex = topLevelItems.findIndex((item) => itemMatches(item, target.type, target.id));
-
-        if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
-            return false;
-        }
-
-        const reorderedItems = swapArrayItems(topLevelItems, sourceIndex, targetIndex);
-        const bookmarkMap = new Map(state.bookmarks.map((bookmark) => [bookmark.id, bookmark]));
-        const groupMap = new Map();
-
-        state.bookmarks.forEach((bookmark) => {
-            const group = getBookmarkGroup(bookmark);
-            if (!isUngrouped(group)) {
-                groupMap.set(group, [...(groupMap.get(group) || []), bookmark]);
+    async function swapTopLevelItems(source, target) {
+        if (!target || !hasChromeBookmarks()) return false;
+        
+        // For groups: look up the Chrome folder ID
+        const getNodeId = async (item) => {
+            if (item.type === 'group') {
+                const fid = await findFolderIdByName(item.id);
+                return fid;
             }
+            return item.id;
+        };
+        
+        const sourceNodeId = await getNodeId(source);
+        const targetNodeId = await getNodeId(target);
+        
+        if (!sourceNodeId || !targetNodeId || sourceNodeId === targetNodeId) return false;
+        
+        // Get all direct children of Bookmarks Bar to find proper index
+        return new Promise((resolve) => {
+            chrome.bookmarks.getChildren("1", (children) => {
+                if (chrome.runtime.lastError || !children) { resolve(false); return; }
+                const targetNode = children.find(c => c.id === targetNodeId);
+                if (!targetNode) { resolve(false); return; }
+                chrome.bookmarks.move(sourceNodeId, { parentId: "1", index: targetNode.index }, async () => {
+                    if (chrome.runtime.lastError) { resolve(false); return; }
+                    state.bookmarks = await fetchChromeBookmarks();
+                    resolve(true);
+                });
+            });
         });
-
-        state.bookmarks = reorderedItems.flatMap((item) => {
-            if (item.type === 'bookmark') {
-                const bookmark = bookmarkMap.get(item.id);
-                return bookmark ? [bookmark] : [];
-            }
-
-            return groupMap.get(item.id) || [];
-        });
-
-        return true;
     }
 
-    function swapGroupBookmarks(sourceId, targetId, group) {
-        if (!targetId) {
-            return false;
-        }
-
-        const normalizedGroup = normalizeGroup(group);
-        const groupedBookmarks = state.bookmarks.filter((bookmark) => getBookmarkGroup(bookmark) === normalizedGroup);
-        const sourceIndex = groupedBookmarks.findIndex((bookmark) => bookmark.id === sourceId);
-        const targetIndex = groupedBookmarks.findIndex((bookmark) => bookmark.id === targetId);
-
-        if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
-            return false;
-        }
-
-        const reorderedGroup = swapArrayItems(groupedBookmarks, sourceIndex, targetIndex);
-        let insertedGroup = false;
-
-        state.bookmarks = state.bookmarks.flatMap((bookmark) => {
-            if (getBookmarkGroup(bookmark) !== normalizedGroup) {
-                return [bookmark];
-            }
-
-            if (insertedGroup) {
-                return [];
-            }
-
-            insertedGroup = true;
-            return reorderedGroup;
+    async function swapGroupBookmarks(sourceId, targetId, group) {
+        if (!targetId || !hasChromeBookmarks()) return false;
+        
+        return new Promise((resolve) => {
+            chrome.bookmarks.get(targetId, (nodes) => {
+                if (chrome.runtime.lastError || !nodes || !nodes[0]) { resolve(false); return; }
+                chrome.bookmarks.move(sourceId, { parentId: nodes[0].parentId, index: nodes[0].index }, async () => {
+                    if (chrome.runtime.lastError) { resolve(false); return; }
+                    state.bookmarks = await fetchChromeBookmarks();
+                    resolve(true);
+                });
+            });
         });
-
-        return true;
     }
 
     function setDropTarget(target) {
@@ -789,38 +906,68 @@
         elements.deletegroupModal.classList.remove('active');
     }
 
-    function deleteGroupOnly() {
+    async function deleteGroupOnly() {
       if (!confirm("The group will be removed, and your bookmarks will be moved out of the group.\nAre you sure?")) {
         return;
       }
-      let group = elements.deleteGrpOnly.dataset.value
-      state.bookmarks.forEach((bookmark) => {
-          if (getBookmarkGroup(bookmark) === normalizeGroup(group)) {
-              bookmark.group = "";
-          }
+      const group = elements.deleteGrpOnly.dataset.value;
+      if (!hasChromeBookmarks()) return;
+      const folderId = await findFolderIdByName(group);
+      if (!folderId) {
+          state.bookmarks = await fetchChromeBookmarks();
+          closeDeleteGroupModal();
+          closeGroupModal();
+          renderBookmarks();
+          return;
+      }
+      
+      await new Promise(resolve => {
+          chrome.bookmarks.getChildren(folderId, (children) => {
+              if (chrome.runtime.lastError || !children || children.length === 0) { resolve(); return; }
+              let moved = 0;
+              children.forEach(child => {
+                  chrome.bookmarks.move(child.id, { parentId: "1" }, () => {
+                      moved++;
+                      if (moved === children.length) resolve();
+                  });
+              });
+          });
       });
-      saveBookmarksToStorage();
-      closeDeleteGroupModal()
-      closeGroupModal()
+      
+      // Use removeTree to safely delete the now-empty folder
+      await new Promise(resolve => chrome.bookmarks.removeTree(folderId, () => {
+          if (chrome.runtime.lastError) { console.warn('Could not remove folder:', chrome.runtime.lastError.message); }
+          resolve();
+      }));
+      
+      state.bookmarks = await fetchChromeBookmarks();
+      closeDeleteGroupModal();
+      closeGroupModal();
       renderBookmarks();
     }
 
-    function deleteGroupAll() {
+    async function deleteGroupAll() {
       if (!confirm("The group and every bookmark inside it will be completely erased.\nAre you sure?")) {
         return;
       }
-      let group = elements.deleteGrpOnly.dataset.value
-      const otherBookmarks = state.bookmarks.filter((bookmark) => getBookmarkGroup(bookmark) !== normalizeGroup(group));
-      state.bookmarks = otherBookmarks
-
-      saveBookmarksToStorage();
-      closeDeleteGroupModal()
-      closeGroupModal()
-      renderBookmarks();
+      const group = elements.deleteGrpOnly.dataset.value;
+      if (!hasChromeBookmarks()) return;
+      const folderId = await findFolderIdByName(group);
       
+      if (folderId) {
+          await new Promise(resolve => chrome.bookmarks.removeTree(folderId, () => {
+              if (chrome.runtime.lastError) { console.warn('Could not remove folder tree:', chrome.runtime.lastError.message); }
+              resolve();
+          }));
+      }
+      
+      state.bookmarks = await fetchChromeBookmarks();
+      closeDeleteGroupModal();
+      closeGroupModal();
+      renderBookmarks();
     }
 
-    function saveBookmark() {
+    async function saveBookmark() {
         const id = elements.bookmarkIdInput.value;
         const name = elements.bookmarkNameInput.value.trim();
         let url = elements.bookmarkUrlInput.value.trim();
@@ -834,6 +981,8 @@
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = `https://${url}`;
         }
+        
+        if (!hasChromeBookmarks()) return;
 
         let previousGroup = '';
 
@@ -841,18 +990,27 @@
             const index = state.bookmarks.findIndex((bookmark) => bookmark.id === id);
             if (index !== -1) {
                 previousGroup = state.bookmarks[index].group;
-                state.bookmarks[index] = { id, name, url, group };
+            }
+            await new Promise(resolve => chrome.bookmarks.update(id, { title: name, url: url }, (result) => {
+                if (chrome.runtime.lastError) { console.error('Update failed:', chrome.runtime.lastError.message); }
+                resolve(result);
+            }));
+            if (normalizeGroup(previousGroup) !== normalizeGroup(group)) {
+                const newParentId = await getOrCreateFolderId(group);
+                await new Promise(resolve => chrome.bookmarks.move(id, { parentId: newParentId }, (result) => {
+                    if (chrome.runtime.lastError) { console.error('Move failed:', chrome.runtime.lastError.message); }
+                    resolve(result);
+                }));
             }
         } else {
-            state.bookmarks.push({
-                id: Date.now().toString(),
-                name,
-                url,
-                group
-            });
+            const parentId = await getOrCreateFolderId(group);
+            await new Promise(resolve => chrome.bookmarks.create({ parentId, title: name, url }, (result) => {
+                if (chrome.runtime.lastError) { console.error('Create failed:', chrome.runtime.lastError.message); }
+                resolve(result);
+            }));
         }
 
-        saveBookmarksToStorage();
+        state.bookmarks = await fetchChromeBookmarks();
         renderBookmarks();
         closeBookmarkModal();
 
@@ -862,11 +1020,11 @@
         }
         
         if (elements.bookmarkGroupModal.classList.contains('active')) {
-            renderGroupBookmarks(previousGroup);
+            renderGroupBookmarks(previousGroup || group);
         }
     }
 
-    function renameGroup() {
+    async function renameGroup() {
         const currentGroup = elements.groupNameModal.dataset.value;
         const nextGroup = elements.groupNameModal.value.trim();
 
@@ -875,29 +1033,39 @@
             return;
         }
 
-        state.bookmarks.forEach((bookmark) => {
-            if (getBookmarkGroup(bookmark) === normalizeGroup(currentGroup)) {
-                bookmark.group = nextGroup;
-            }
-        });
+        if (!hasChromeBookmarks()) return;
+        
+        // Look up the folder by its CURRENT name (don't create a new one)
+        const folderId = await findFolderIdByName(currentGroup);
+        if (!folderId) {
+            console.error('Could not find folder to rename:', currentGroup);
+            return;
+        }
+        await new Promise(resolve => chrome.bookmarks.update(folderId, { title: nextGroup }, (result) => {
+            if (chrome.runtime.lastError) { console.error('Rename failed:', chrome.runtime.lastError.message); }
+            resolve(result);
+        }));
 
-        saveBookmarksToStorage();
+        state.bookmarks = await fetchChromeBookmarks();
         renderBookmarks();
         closeGroupModal();
     }
 
-    function deleteBookmark(id) {
+    async function deleteBookmark(id) {
         if (!confirm('Are you sure you want to delete this bookmark?')) {
             return;
         }
 
         const bookmark = state.bookmarks.find((item) => item.id === id);
-        if (!bookmark) {
+        if (!bookmark || !hasChromeBookmarks()) {
             return;
         }
 
-        state.bookmarks = state.bookmarks.filter((item) => item.id !== id);
-        saveBookmarksToStorage();
+        await new Promise(resolve => chrome.bookmarks.remove(id, () => {
+            if (chrome.runtime.lastError) { console.error('Delete failed:', chrome.runtime.lastError.message); }
+            resolve();
+        }));
+        state.bookmarks = await fetchChromeBookmarks();
         renderBookmarks();
 
         if (elements.bookmarkGroupModal.classList.contains('active')) {
@@ -976,7 +1144,7 @@
         setDropTarget(containedTarget);
     }
 
-    function handleBookmarkDrop(event) {
+    async function handleBookmarkDrop(event) {
         if (!draggedItem) {
             return;
         }
@@ -992,9 +1160,9 @@
 
         if (insideGroup) {
             const targetId = targetElement?.dataset.id || null;
-            changed = swapGroupBookmarks(draggedItem.id, targetId, draggedItem.group);
+            changed = await swapGroupBookmarks(draggedItem.id, targetId, draggedItem.group);
         } else {
-            changed = swapTopLevelItems(draggedItem, findTopLevelItemFromElement(targetElement));
+            changed = await swapTopLevelItems(draggedItem, findTopLevelItemFromElement(targetElement));
         }
 
         if (!changed) {
@@ -1002,7 +1170,6 @@
         }
 
         suppressClickUntil = Date.now() + 250;
-        saveBookmarksToStorage();
         renderBookmarks();
 
         if (insideGroup) {
