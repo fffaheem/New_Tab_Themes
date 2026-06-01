@@ -58,6 +58,7 @@
         speedValue: document.getElementById('speedValue'),
         fontSizeValue: document.getElementById('fontSizeValue'),
         loadConfigBtn: document.getElementById('loadConfigBtn'),
+        exportConfigBtn: document.getElementById('exportConfigBtn'),
         bookmarksContainer: document.getElementById('bookmarksContainer'),
         bookmarksContainerGroup: document.getElementById('bookmarksContainerGroup'),
         addBookmarkBtn: document.getElementById('addBookmarkBtn'),
@@ -355,6 +356,32 @@
         // First run: apply config silently without wiping (Bookmarks Bar is presumably already set up)
         await applyConfig(await readConfigFile(), false);
         await writeStorage({ [STORAGE_KEYS.configLoaded]: true });
+    }
+
+    async function exportConfig() {
+        // Build bookmarks from current Chrome Bookmarks Bar
+        const currentBookmarks = hasChromeBookmarks() ? await fetchChromeBookmarks() : state.bookmarks;
+
+        const config = {
+            matrix_search: state.searchEngine,
+            matrix_settings: { ...state.settings },
+            matrix_bookmarks: currentBookmarks.map(({ name, url, group }) => ({
+                name,
+                url,
+                group: group || ''
+            }))
+        };
+
+        const json = JSON.stringify(config, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     async function loadConfigFromMenu() {
@@ -1304,6 +1331,15 @@
                 await loadConfigFromMenu();
             } finally {
                 elements.loadConfigBtn.disabled = false;
+            }
+        });
+
+        elements.exportConfigBtn?.addEventListener('click', async () => {
+            elements.exportConfigBtn.disabled = true;
+            try {
+                await exportConfig();
+            } finally {
+                elements.exportConfigBtn.disabled = false;
             }
         });
 

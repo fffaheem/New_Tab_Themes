@@ -7,6 +7,36 @@
     --ui-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ─── Premium Custom Scrollbar ─────────────────────────────── */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--theme-color-rgb), 0.4) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(var(--theme-color-rgb), 0.35);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--theme-color-rgb), 0.75);
+}
+
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
 body {
     margin: 0;
     overflow: hidden;
@@ -94,7 +124,9 @@ canvas {
 
 .config-control-group {
     justify-content: center;
+    flex-direction: column;
     margin-top: 10px;
+    gap: 8px;
 }
 
 .control-group>label {
@@ -498,6 +530,19 @@ input[type="checkbox"] {
     width: 100%;
     border-style: solid;
     padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.export-config-btn {
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+.export-config-btn:hover {
+    opacity: 1;
 }
 
 /* Modal group */
@@ -727,7 +772,7 @@ input[type="checkbox"] {
     transition: all 0.3s ease;
     min-height: auto;
     max-height: 15rem;
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
 }
 
