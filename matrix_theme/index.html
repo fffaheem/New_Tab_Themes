@@ -56,8 +56,13 @@
                 <span id="fontSizeValue">16</span>
             </div>
             <div class="control-group config-control-group">
-                <button id="loadConfigBtn" class="add-bookmark-btn load-config-btn"><i class="fas fa-file-import"></i> Load Config</button>
-                <button id="exportConfigBtn" class="add-bookmark-btn load-config-btn export-config-btn"><i class="fas fa-file-export"></i> Export Config</button>
+                <button id="loadConfigBtn" class="add-bookmark-btn load-config-btn"><i class="fas fa-file-import"></i>
+                    Load Bundled Config</button>
+                <button id="importConfigBtn" class="add-bookmark-btn load-config-btn import-config-btn"><i
+                        class="fas fa-folder-open"></i> Import Config</button>
+                <button id="exportConfigBtn" class="add-bookmark-btn load-config-btn export-config-btn"><i
+                        class="fas fa-file-export"></i> Export Config</button>
+                <input type="file" id="configFileInput" accept=".json,application/json" style="display:none">
             </div>
         </div>
     </div>
@@ -123,18 +128,19 @@
                 <button class="btn-delete" id="deleteBookmarkGroupBtn">Delete</button>
                 <div class="modal-actions-group-btns">
                     <button class="btn-add-cancel" id="cancelBookmarkGroupBtn">Cancel</button>
-                    <button class="btn-add-cancel" id="addBookmarkGroupBtn" ><i class="fas fa-plus"></i> Add Bookmark</button>
+                    <button class="btn-add-cancel" id="addBookmarkGroupBtn"><i class="fas fa-plus"></i> Add
+                        Bookmark</button>
                     <button class="btn-save" id="saveBookmarkGroupBtn">Save</button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- group Modal delete confirm -->
     <div class="modal-overlay-delete" id="deletegroupModal">
         <div class="modal-content">
             <div class="modal-delete-btn">
-                
+
                 <button class="modal-delete-confirm" id="deleteGrpOnly">Delete group only (Keep bookmarks)</button>
                 <button class="modal-delete-confirm" id="deleteGrpAll">Delete group and all bookmarks</button>
 
@@ -144,7 +150,7 @@
             </div>
         </div>
     </div>
-    
+
 </body>
 <script src="./script.js"></script>
 

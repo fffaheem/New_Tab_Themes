@@ -58,7 +58,9 @@
         speedValue: document.getElementById('speedValue'),
         fontSizeValue: document.getElementById('fontSizeValue'),
         loadConfigBtn: document.getElementById('loadConfigBtn'),
+        importConfigBtn: document.getElementById('importConfigBtn'),
         exportConfigBtn: document.getElementById('exportConfigBtn'),
+        configFileInput: document.getElementById('configFileInput'),
         bookmarksContainer: document.getElementById('bookmarksContainer'),
         bookmarksContainerGroup: document.getElementById('bookmarksContainerGroup'),
         addBookmarkBtn: document.getElementById('addBookmarkBtn'),
@@ -390,7 +392,32 @@
             alert('⚠️ Could not read config.json.\nMake sure the file exists and is valid JSON.');
             return;
         }
+        await confirmAndApplyConfig(config, 'bundled config.json');
+    }
 
+    function readFileAsJson(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) { reject(new Error('No file selected')); return; }
+            if (file.size > 5 * 1024 * 1024) { reject(new Error('File too large (max 5 MB)')); return; }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                        reject(new Error('File does not contain a valid JSON object'));
+                    } else {
+                        resolve(parsed);
+                    }
+                } catch {
+                    reject(new Error('File is not valid JSON'));
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+
+    async function confirmAndApplyConfig(config, source) {
         const configData = getConfigData(config);
         const configBookmarkCount = configData.bookmarks.length;
 
@@ -406,14 +433,14 @@
         }
 
         const warningLines = [
-            '⚠️  WARNING: Load Config will REPLACE all your bookmarks!',
+            `⚠️  WARNING: Loading from ${source} will REPLACE all your bookmarks!`,
             '',
             currentCount > 0
                 ? `  • ${currentCount} item(s) currently in your Bookmarks Bar will be permanently deleted.`
                 : '  • Your Bookmarks Bar is already empty.',
             configBookmarkCount > 0
-                ? `  • ${configBookmarkCount} bookmark(s) from config.json will be added.`
-                : '  • config.json has no bookmarks — your Bookmarks Bar will be left empty.',
+                ? `  • ${configBookmarkCount} bookmark(s) from the config will be added.`
+                : '  • The config has no bookmarks — your Bookmarks Bar will be left empty.',
             '',
             'This cannot be undone. Continue?'
         ];
@@ -425,6 +452,33 @@
         await applyConfig(config, true /* wipeFirst */);
         applySettings();
         renderBookmarks();
+    }
+
+    async function importConfigFromFile() {
+        return new Promise((resolve) => {
+            const input = elements.configFileInput;
+            // Reset so the same file can be picked again
+            input.value = '';
+
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (!file) { resolve(); return; }
+
+                let config;
+                try {
+                    config = await readFileAsJson(file);
+                } catch (err) {
+                    alert(`⚠️ Could not read "${file.name}":\n${err.message}`);
+                    resolve();
+                    return;
+                }
+
+                await confirmAndApplyConfig(config, `"${file.name}"`);
+                resolve();
+            };
+
+            input.click();
+        });
     }
 
     async function loadDataFromStorage() {
@@ -1331,6 +1385,15 @@
                 await loadConfigFromMenu();
             } finally {
                 elements.loadConfigBtn.disabled = false;
+            }
+        });
+
+        elements.importConfigBtn?.addEventListener('click', async () => {
+            elements.importConfigBtn.disabled = true;
+            try {
+                await importConfigFromFile();
+            } finally {
+                elements.importConfigBtn.disabled = false;
             }
         });
 

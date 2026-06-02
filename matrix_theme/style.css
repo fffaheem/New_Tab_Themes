@@ -545,6 +545,13 @@ input[type="checkbox"] {
     opacity: 1;
 }
 
+.import-config-btn {
+    border-style: solid;
+    opacity: 0.9;
+    border-color: rgba(var(--theme-color-rgb), 0.5);
+    background: rgba(var(--theme-color-rgb), 0.05);
+}
+
 /* Modal group */
 
 .modal-overlay-delete{
