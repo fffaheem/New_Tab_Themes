@@ -1237,13 +1237,19 @@
 
         event.preventDefault();
         const targetElement = event.target.closest('.bookmark-item');
+
+        // Snapshot draggedItem NOW before any await —
+        // the browser fires dragend (which nulls draggedItem) concurrently
+        // with our async Chrome API calls, causing draggedItem.group to throw.
+        const snapshot = { ...draggedItem };
+
         let changed = false;
 
         if (insideGroup) {
             const targetId = targetElement?.dataset.id || null;
-            changed = await swapGroupBookmarks(draggedItem.id, targetId, draggedItem.group);
+            changed = await swapGroupBookmarks(snapshot.id, targetId, snapshot.group);
         } else {
-            changed = await swapTopLevelItems(draggedItem, findTopLevelItemFromElement(targetElement));
+            changed = await swapTopLevelItems(snapshot, findTopLevelItemFromElement(targetElement));
         }
 
         if (!changed) {
@@ -1254,7 +1260,7 @@
         renderBookmarks();
 
         if (insideGroup) {
-            renderGroupBookmarks(draggedItem.group);
+            renderGroupBookmarks(snapshot.group);
         }
     }
 
