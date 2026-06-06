@@ -13,7 +13,8 @@
         animationSpeed: 18,
         fontSize: 20,
         is24HourFormat: true,
-        showSeconds: true
+        showSeconds: true,
+        hideBookmarks: false
     };
 
     const DEFAULT_BOOKMARKS = [
@@ -675,6 +676,23 @@
         resetRain();
         clearCanvas();
         updateClock();
+
+        // Apply bookmark visibility state
+        const isHidden = settings.hideBookmarks === true;
+        const icon = elements.visibilityMenuBtn.querySelector('i');
+        if (isHidden) {
+            elements.bookmarkSection.classList.add("visibilityMenuNone");
+            if (icon) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        } else {
+            elements.bookmarkSection.classList.remove("visibilityMenuNone");
+            if (icon) {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
 
         if (document.fonts?.ready) {
             document.fonts.ready.then(() => updateFavicon(settings.themeColor));
@@ -1414,6 +1432,15 @@
 
         elements.menuToggle.addEventListener('click', () => {
             elements.matrixControls.classList.toggle('hidden');
+            elements.menuToggle.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (event) => {
+            const isClickInsideMenu = event.target.closest('.hamburger-menu');
+            if (!isClickInsideMenu && !elements.matrixControls.classList.contains('hidden')) {
+                elements.matrixControls.classList.add('hidden');
+                elements.menuToggle.classList.remove('active');
+            }
         });
 
         elements.searchField.addEventListener('cut', handleSearchMouse);
@@ -1444,8 +1471,25 @@
         elements.addBookmarkGroupBtn.addEventListener('click', addGroupModal);
 
         elements.visibilityMenuBtn.addEventListener('click', () => {
-          console.log("Clicked")
-          elements.bookmarkSection.classList.toggle("visibilityMenuNone")
+            console.log("Clicked");
+            const isHidden = !elements.bookmarkSection.classList.contains("visibilityMenuNone");
+            state.settings.hideBookmarks = isHidden;
+            saveSettingsToStorage();
+            
+            const icon = elements.visibilityMenuBtn.querySelector('i');
+            if (isHidden) {
+                elements.bookmarkSection.classList.add("visibilityMenuNone");
+                if (icon) {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            } else {
+                elements.bookmarkSection.classList.remove("visibilityMenuNone");
+                if (icon) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
         });
       
         elements.bookmarkModal.addEventListener('click', (event) => {
