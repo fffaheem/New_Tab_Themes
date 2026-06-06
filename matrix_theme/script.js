@@ -85,6 +85,8 @@
         deleteGrpAll: document.getElementById('deleteGrpAll'),
         addBookmarkGroupBtn: document.getElementById('addBookmarkGroupBtn'),
         search_icon: document.querySelector('.search-icon'),
+        visibilityMenuBtn: document.getElementById('visibilityMenu'),
+        bookmarkSection: document.querySelector(".bookmarks-section"),
     };
 
     const context = elements.canvas.getContext('2d');
@@ -500,10 +502,6 @@
         writeStorage({ [STORAGE_KEYS.settings]: state.settings });
     }
 
-    function saveBookmarksToStorage() {
-        // No-op: Bookmarks are saved directly to chrome.bookmarks
-    }
-
     function hexToRgb(hex) {
         if (hex.length === 4) {
             const [r, g, b] = [hex[1], hex[2], hex[3]].map((value) => parseInt(value + value, 16));
@@ -737,16 +735,6 @@
         }
 
         return null;
-    }
-
-    function itemMatches(item, type, id) {
-        return item.type === type && item.id === id;
-    }
-
-    function swapArrayItems(items, sourceIndex, targetIndex) {
-        const nextItems = [...items];
-        [nextItems[sourceIndex], nextItems[targetIndex]] = [nextItems[targetIndex], nextItems[sourceIndex]];
-        return nextItems;
     }
 
     async function swapTopLevelItems(source, target) {
@@ -1455,6 +1443,11 @@
         elements.deleteGrpAll.addEventListener('click', deleteGroupAll);
         elements.addBookmarkGroupBtn.addEventListener('click', addGroupModal);
 
+        elements.visibilityMenuBtn.addEventListener('click', () => {
+          console.log("Clicked")
+          elements.bookmarkSection.classList.toggle("visibilityMenuNone")
+        });
+      
         elements.bookmarkModal.addEventListener('click', (event) => {
             if (event.target === elements.bookmarkModal) {
                 closeBookmarkModal();
