@@ -68,9 +68,47 @@
     </div>
 
     <div class="visibility-menu" id="visibilityMenu">
-        <button class="menu-toggle" id="visibility-toggle">
+        <button class="menu-toggle" id="visibilityToggle">
             <i class="fa-regular fa-eye"></i>
         </button>
+        <div class="matrix-controls hidden" id="visibilityControls">
+            <div class="control-group">
+                <label for="showClockToggle">Show Clock:</label>
+                <div class="toggle-container">
+                    <input type="checkbox" id="showClockToggle" checked>
+                    <label class="toggle-switch" for="showClockToggle">
+                        <span class="toggle-knob"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="showLogoToggle">Show Logo:</label>
+                <div class="toggle-container">
+                    <input type="checkbox" id="showLogoToggle" checked>
+                    <label class="toggle-switch" for="showLogoToggle">
+                        <span class="toggle-knob"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="showSearchToggle">Show Search:</label>
+                <div class="toggle-container">
+                    <input type="checkbox" id="showSearchToggle" checked>
+                    <label class="toggle-switch" for="showSearchToggle">
+                        <span class="toggle-knob"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="showBookmarksToggle">Show Bookmarks:</label>
+                <div class="toggle-container">
+                    <input type="checkbox" id="showBookmarksToggle" checked>
+                    <label class="toggle-switch" for="showBookmarksToggle">
+                        <span class="toggle-knob"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div id="digitalClock" class="digital-clock"></div>

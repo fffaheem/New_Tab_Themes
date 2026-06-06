@@ -14,6 +14,10 @@
         fontSize: 20,
         is24HourFormat: true,
         showSeconds: true,
+        showClock: true,
+        showLogo: true,
+        showSearch: true,
+        showBookmarks: true,
         hideBookmarks: false
     };
 
@@ -87,7 +91,15 @@
         addBookmarkGroupBtn: document.getElementById('addBookmarkGroupBtn'),
         search_icon: document.querySelector('.search-icon'),
         visibilityMenuBtn: document.getElementById('visibilityMenu'),
+        visibilityToggle: document.getElementById('visibilityToggle'),
+        visibilityControls: document.getElementById('visibilityControls'),
+        showClockToggle: document.getElementById('showClockToggle'),
+        showLogoToggle: document.getElementById('showLogoToggle'),
+        showSearchToggle: document.getElementById('showSearchToggle'),
+        showBookmarksToggle: document.getElementById('showBookmarksToggle'),
         bookmarkSection: document.querySelector(".bookmarks-section"),
+        logoSection: document.querySelector(".brand-title"),
+        searchSection: document.querySelector(".search-container"),
     };
 
     const context = elements.canvas.getContext('2d');
@@ -677,22 +689,49 @@
         clearCanvas();
         updateClock();
 
-        // Apply bookmark visibility state
-        const isHidden = settings.hideBookmarks === true;
-        const icon = elements.visibilityMenuBtn.querySelector('i');
-        if (isHidden) {
-            elements.bookmarkSection.classList.add("visibilityMenuNone");
-            if (icon) {
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+        // Toggle time visibility
+        if (settings.showClock === false) {
+            elements.digitalClock.classList.add('hide-element');
+        } else {
+            elements.digitalClock.classList.remove('hide-element');
+        }
+
+        // Toggle logo visibility
+        if (settings.showLogo === false) {
+            elements.logoSection.classList.add('hide-element');
+        } else {
+            elements.logoSection.classList.remove('hide-element');
+        }
+
+        // Toggle search visibility
+        if (settings.showSearch === false) {
+            elements.searchSection.classList.add('hide-element');
+        } else {
+            elements.searchSection.classList.remove('hide-element');
+        }
+
+        // Toggle bookmarks visibility
+        const showBookmarks = settings.showBookmarks !== undefined ? settings.showBookmarks : !settings.hideBookmarks;
+        const visibilityIcon = elements.visibilityToggle.querySelector('i');
+        if (showBookmarks === false) {
+            elements.bookmarkSection.classList.add('hide-element');
+            if (visibilityIcon) {
+                visibilityIcon.classList.remove('fa-eye');
+                visibilityIcon.classList.add('fa-eye-slash');
             }
         } else {
-            elements.bookmarkSection.classList.remove("visibilityMenuNone");
-            if (icon) {
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+            elements.bookmarkSection.classList.remove('hide-element');
+            if (visibilityIcon) {
+                visibilityIcon.classList.remove('fa-eye-slash');
+                visibilityIcon.classList.add('fa-eye');
             }
         }
+
+        // Sync toggle states in visibility menu
+        elements.showClockToggle.checked = settings.showClock !== false;
+        elements.showLogoToggle.checked = settings.showLogo !== false;
+        elements.showSearchToggle.checked = settings.showSearch !== false;
+        elements.showBookmarksToggle.checked = showBookmarks !== false;
 
         if (document.fonts?.ready) {
             document.fonts.ready.then(() => updateFavicon(settings.themeColor));
@@ -1436,10 +1475,18 @@
         });
 
         document.addEventListener('click', (event) => {
+            // Left menu (hamburger menu) click outside
             const isClickInsideMenu = event.target.closest('.hamburger-menu');
             if (!isClickInsideMenu && !elements.matrixControls.classList.contains('hidden')) {
                 elements.matrixControls.classList.add('hidden');
                 elements.menuToggle.classList.remove('active');
+            }
+
+            // Right menu (visibility menu) click outside
+            const isClickInsideVisibility = event.target.closest('#visibilityMenu');
+            if (!isClickInsideVisibility && !elements.visibilityControls.classList.contains('hidden')) {
+                elements.visibilityControls.classList.add('hidden');
+                elements.visibilityToggle.classList.remove('active');
             }
         });
 
@@ -1470,24 +1517,59 @@
         elements.deleteGrpAll.addEventListener('click', deleteGroupAll);
         elements.addBookmarkGroupBtn.addEventListener('click', addGroupModal);
 
-        elements.visibilityMenuBtn.addEventListener('click', () => {
-            console.log("Clicked");
-            const isHidden = !elements.bookmarkSection.classList.contains("visibilityMenuNone");
-            state.settings.hideBookmarks = isHidden;
+        elements.visibilityToggle.addEventListener('click', () => {
+            elements.visibilityControls.classList.toggle('hidden');
+            elements.visibilityToggle.classList.toggle('active');
+        });
+
+        elements.showClockToggle.addEventListener('change', (event) => {
+            state.settings.showClock = event.target.checked;
+            saveSettingsToStorage();
+            if (event.target.checked) {
+                elements.digitalClock.classList.remove('hide-element');
+            } else {
+                elements.digitalClock.classList.add('hide-element');
+            }
+        });
+
+        elements.showLogoToggle.addEventListener('change', (event) => {
+            state.settings.showLogo = event.target.checked;
+            saveSettingsToStorage();
+            if (event.target.checked) {
+                elements.logoSection.classList.remove('hide-element');
+            } else {
+                elements.logoSection.classList.add('hide-element');
+            }
+        });
+
+        elements.showSearchToggle.addEventListener('change', (event) => {
+            state.settings.showSearch = event.target.checked;
+            saveSettingsToStorage();
+            if (event.target.checked) {
+                elements.searchSection.classList.remove('hide-element');
+            } else {
+                elements.searchSection.classList.add('hide-element');
+            }
+        });
+
+        elements.showBookmarksToggle.addEventListener('change', (event) => {
+            const isChecked = event.target.checked;
+            state.settings.showBookmarks = isChecked;
+            state.settings.hideBookmarks = !isChecked;
             saveSettingsToStorage();
             
-            const icon = elements.visibilityMenuBtn.querySelector('i');
-            if (isHidden) {
-                elements.bookmarkSection.classList.add("visibilityMenuNone");
-                if (icon) {
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
+            const visibilityIcon = elements.visibilityToggle.querySelector('i');
+            if (isChecked) {
+                elements.bookmarkSection.classList.remove('hide-element');
+                if (visibilityIcon) {
+                    visibilityIcon.classList.remove('fa-eye-slash');
+                    visibilityIcon.classList.add('fa-eye');
                 }
             } else {
-                elements.bookmarkSection.classList.remove("visibilityMenuNone");
-                if (icon) {
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
+                elements.bookmarkSection.classList.add('hide-element');
+                if (visibilityIcon) {
+                    visibilityIcon.classList.remove('fa-eye');
+                    visibilityIcon.classList.add('fa-eye-slash');
                 }
             }
         });

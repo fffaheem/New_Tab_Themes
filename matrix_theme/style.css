@@ -68,12 +68,12 @@ canvas {
     /* Ensure it's above the controls when visible */
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    /* Align the button to the start */
+    align-items: flex-end;
+    /* Align the button to the end */
 }
 
-.bookmarks-section.visibilityMenuNone{
-    display: none;
+.hide-element {
+    display: none !important;
 }
 
 
