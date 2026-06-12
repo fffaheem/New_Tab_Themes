@@ -836,21 +836,28 @@ input[type="checkbox"] {
     transition: all 0.3s ease;
 }
 
-/* Dynamic centering layout for bookmarks when both logo and search are hidden */
-body:has(.brand-title.hide-element):has(.search-container.hide-element) .bookmarks-section {
+/* If Clock, Logo, and Search are all disabled, center bookmarks in the absolute middle of the screen */
+body:has(#digitalClock.hide-element):has(.brand-title.hide-element):has(.search-container.hide-element) .bookmarks-section {
     top: 50%;
     transform: translate(-50%, -50%);
     max-height: 80vh;
 }
 
-/* If clock and search are disabled, but logo and bookmarks are enabled: position logo on top and bookmarks centered */
+/* If clock and search are disabled, but logo and bookmarks are enabled: position logo on top and bookmarks centered in remaining space */
 body:has(#digitalClock.hide-element):has(.search-container.hide-element):not(:has(.brand-title.hide-element)):not(:has(.bookmarks-section.hide-element)) .center-container {
     top: 2.5rem;
     transform: translate(-50%, 0);
 }
 
 body:has(#digitalClock.hide-element):has(.search-container.hide-element):not(:has(.brand-title.hide-element)):not(:has(.bookmarks-section.hide-element)) .bookmarks-section {
-    top: 50%;
+    top: calc(50% + 3rem);
+    transform: translate(-50%, -50%);
+    max-height: 80vh;
+}
+
+/* If clock is enabled, search and logo are disabled: center bookmarks in remaining space below clock */
+body:not(:has(#digitalClock.hide-element)):has(.search-container.hide-element):has(.brand-title.hide-element):not(:has(.bookmarks-section.hide-element)) .bookmarks-section {
+    top: calc(50% + 3rem);
     transform: translate(-50%, -50%);
     max-height: 80vh;
 }
