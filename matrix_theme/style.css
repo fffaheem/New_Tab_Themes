@@ -843,20 +843,17 @@ body:has(#digitalClock.hide-element):has(.brand-title.hide-element):has(.search-
     max-height: 80vh;
 }
 
-/* If clock and search are disabled, but logo and bookmarks are enabled: position logo on top and bookmarks centered in remaining space */
-body:has(#digitalClock.hide-element):has(.search-container.hide-element):not(:has(.brand-title.hide-element)):not(:has(.bookmarks-section.hide-element)) .center-container {
+/* Position Logo or Search at the top when the other is disabled (along with Clock), but Bookmarks is enabled */
+body:has(#digitalClock.hide-element):has(.search-container.hide-element):not(:has(.brand-title.hide-element)):not(:has(.bookmarks-section.hide-element)) .center-container,
+body:has(#digitalClock.hide-element):has(.brand-title.hide-element):not(:has(.search-container.hide-element)):not(:has(.bookmarks-section.hide-element)) .center-container {
     top: 2.5rem;
     transform: translate(-50%, 0);
 }
 
-body:has(#digitalClock.hide-element):has(.search-container.hide-element):not(:has(.brand-title.hide-element)):not(:has(.bookmarks-section.hide-element)) .bookmarks-section {
-    top: calc(50% + 3rem);
-    transform: translate(-50%, -50%);
-    max-height: 80vh;
-}
-
-/* If clock is enabled, search and logo are disabled: center bookmarks in remaining space below clock */
-body:not(:has(#digitalClock.hide-element)):has(.search-container.hide-element):has(.brand-title.hide-element):not(:has(.bookmarks-section.hide-element)) .bookmarks-section {
+/* Center bookmarks in remaining space when only Clock, only Logo, or only Search is on top along with Bookmarks */
+body:not(:has(#digitalClock.hide-element)):has(.search-container.hide-element):has(.brand-title.hide-element):not(:has(.bookmarks-section.hide-element)) .bookmarks-section,
+body:has(#digitalClock.hide-element):has(.search-container.hide-element):not(:has(.brand-title.hide-element)):not(:has(.bookmarks-section.hide-element)) .bookmarks-section,
+body:has(#digitalClock.hide-element):has(.brand-title.hide-element):not(:has(.search-container.hide-element)):not(:has(.bookmarks-section.hide-element)) .bookmarks-section {
     top: calc(50% + 3rem);
     transform: translate(-50%, -50%);
     max-height: 80vh;
