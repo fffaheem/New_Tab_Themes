@@ -63,7 +63,7 @@ A sleek, highly customizable Matrix-inspired new tab page for Chromium-based bro
 ## 🛠️ Installation
 
 ### Install on Google Chrome / Brave
-1. Download the latest release from the [GitHub releases page](https://github.com/fffaheem/New_Tab_Themes/releases/tag/Matrix_theme) and extract the `.zip` file.
+1. Download the latest release from the [GitHub releases page](https://github.com/fffaheem/New_Tab_Themes/releases/tag/Matrix_Theme_v2.5) and extract the `.zip` file.
 2. Open your browser and navigate to: `chrome://extensions/` (or `brave://extensions/`).
 3. Enable **Developer mode** (usually a toggle in the top-right corner).
 4. Click **Load unpacked** and select the extracted `Matrix_theme` folder.
