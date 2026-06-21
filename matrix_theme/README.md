@@ -1,11 +1,10 @@
+# Matrix New Tab (v2.5)
 
-# Matrix New Tab
-
-A sleek Matrix-inspired new tab page for Chromium-based browsers featuring digital rain effects, built-in search, and customizable bookmarks.
+A sleek, highly customizable Matrix-inspired new tab page for Chromium-based browsers. Featuring digital rain effects, a built-in smart search, and an advanced bookmark manager that syncs natively with your browser.
 
 ---
 
-## Project Preview
+## 🚀 Project Preview
 
 <div align="center">
 
@@ -30,154 +29,54 @@ A sleek Matrix-inspired new tab page for Chromium-based browsers featuring digit
 
 ---
 
-## Features
+## ✨ What's New & Key Features
 
-- Matrix-style digital rain animation
-- Customizable rain speed
-- Adjustable rain font size
-- Changeable rain color
-- Custom background color support
-- Built-in search bar
-- Quick-access bookmarks
-- Bookmark folders using groups
-- Drag-and-switch bookmark sorting
-- Persistent bookmark order
-- Configurable default bookmarks and order
-- Clean terminal-inspired interface
-- Multiple theme variations
-- Lightweight and fast performance
-- Minimal and distraction-free design
+### 🔖 Native Bookmark Sync & Advanced Management
+* **Live Browser Sync:** Deeply integrated with your browser's native Bookmarks Bar via the Chrome Bookmarks API.
+* **In-App Manager:** Add, edit, rename, and delete bookmarks directly from the new tab page—no need to open the browser's bookmark manager.
+* **Drag & Drop Sorting:** Rearrange bookmarks and folders effortlessly. Your changes instantly sync with your browser.
+* **Folder Control:** Group bookmarks into folders. Advanced deletion options let you choose to delete just the folder (keeping the links) or erase the folder and all its contents.
 
----
+### 🎨 Complete UI Customization & Smart Layout
+* **Matrix Rain Settings:** Instantly adjust rain speed, density (font size), theme colors, and background colors via the interactive Hamburger Menu.
+* **Visibility Menu (👁️):** Declutter your workspace. Toggle the visibility of the Clock, Logo, Search Bar, or Bookmarks with a single click.
+* **Smart Auto-Centering:** The layout dynamically adapts. If you hide certain UI elements, the remaining components perfectly re-center themselves.
+* **Dynamic Favicon:** Your tab icon automatically updates to match your active theme color.
+* **Premium Aesthetics:** Features a custom-styled scrollbar and terminal-inspired interface.
 
-## Supported Browsers
+### 🕒 Enhanced Digital Clock
+* Displays the exact time alongside the current day, date, and month.
+* Easily toggle between **12-hour** and **24-hour** formats.
+* Option to show or hide seconds for a cleaner look.
 
-- Google Chrome
-- Microsoft Edge
-- Brave Browser
-- Other Chromium-based browsers
+### ⚙️ Seamless Import/Export Configuration
+* **Export Config:** Back up your current visual settings, search engine preference, and bookmarks to a `.json` file with one click.
+* **Import Config:** Easily migrate your personalized setup to another machine.
+* **Bundled Load:** Instantly reset or apply default configurations straight from the menu.
 
----
-
-# Download
-
-Download the latest release from the GitHub releases page:
-
-[Download Matrix New Tab](https://github.com/fffaheem/New_Tab_Themes/releases/tag/Matrix_theme)
-
-Extract the ZIP file.
+### 🔍 Smart Search
+* Built-in search bar with auto-URL detection (automatically navigates to typed web addresses).
+* Intelligently enables/disables based on cut, paste, and typed input.
 
 ---
 
-# Installation
+## 🛠️ Installation
 
-## Install on Google Chrome
+### Install on Google Chrome / Brave
+1. Download the latest release from the [GitHub releases page](https://github.com/fffaheem/New_Tab_Themes/releases/tag/Matrix_theme) and extract the `.zip` file.
+2. Open your browser and navigate to: `chrome://extensions/` (or `brave://extensions/`).
+3. Enable **Developer mode** (usually a toggle in the top-right corner).
+4. Click **Load unpacked** and select the extracted `Matrix_theme` folder.
+5. Open a new tab to launch the Matrix interface!
 
-1. Open Chrome
-2. Navigate to:
-
-```text
-chrome://extensions/
-```
-
-3. Enable **Developer mode** (top-right corner)
-4. Click **Load unpacked**
-5. Select the extracted `Matrix_New_Tab` folder
-
-Open a new tab to launch the Matrix interface.
+### Install on Microsoft Edge
+1. Open Edge and navigate to: `edge://extensions/`
+2. Enable **Developer mode** in the bottom-left corner.
+3. Click **Load unpacked** and select the extracted `Matrix_theme` folder.
+4. Open a new tab and enjoy.
 
 ---
 
-## Install on Microsoft Edge
+## 🔧 Managing Your Configuration Manually (Optional)
 
-1. Open Microsoft Edge
-2. Navigate to:
-
-```text
-edge://extensions/
-```
-
-3. Enable **Developer mode**
-4. Click **Load unpacked**
-5. Select the extracted `Matrix_New_Tab` folder
-
-Open a new tab to launch the Matrix interface.
-
----
-
-## Updating the Extension
-
-After making changes to the extension files:
-
-1. Open the Extensions page
-2. Click the reload button on the extension card
-
-Your changes will apply instantly.
-
----
-
-## Manual Configuration
-
-You can manually edit the settings, default bookmarks, bookmark groups, bookmark order, and search engine.
-
-Locate the `config.json` file and modify the entries as needed.
-
-Make sure each bookmark `id` is unique.
-
-Bookmark order is controlled by the order of items in the `matrix_bookmarks` array. The `id` is only used to identify a bookmark; changing an `id` does not sort it.
-
-To create a folder, give multiple bookmarks the same `group` value. Bookmarks with an empty `group` appear outside folders. Inside a folder, bookmarks follow the same array order.
-
-Example:
-
-```json
-{
-  "matrix_search": "https://www.google.com/search?q=",
-  "matrix_settings": {
-    "animationSpeed": 18,
-    "backgroundColor": "#000000",
-    "fontSize": 20,
-    "is24HourFormat": true,
-    "showSeconds": true,
-    "themeColor": "#00FF41"
-  },
-  "matrix_bookmarks": [
-    {
-      "id": "1",
-      "name": "Google",
-      "url": "https://google.com",
-      "group": ""
-    },
-    {
-      "id": "2",
-      "name": "YouTube",
-      "url": "https://youtube.com",
-      "group": ""
-    },
-    {
-      "id": "3",
-      "name": "GitHub",
-      "url": "https://github.com",
-      "group": "Dev"
-    },
-    {
-      "id": "4",
-      "name": "MDN",
-      "url": "https://developer.mozilla.org",
-      "group": "Dev"
-    }
-  ]
-}
-```
-
-In this example, Google and YouTube appear as regular bookmarks. GitHub and MDN appear inside the `Dev` folder, in that order. Move an item earlier or later in `matrix_bookmarks` to change its default position.
-
-After editing, load the config from the hamburger menu.
-
----
-
-<div>
-
-Developed by Mohammad Faheem Ahmad
-
-</div>
+While the new UI allows you to handle everything visually, power users can still edit the `config.json` manually to set up a deployment configuration.
