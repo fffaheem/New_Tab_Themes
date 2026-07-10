@@ -5,13 +5,168 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>New Tab</title>
         <link rel="stylesheet" href="style.css" />
+        <script>
+            (function () {
+                const theme = localStorage.getItem("xp-color-scheme") || "luna";
+                const wallpaper =
+                    localStorage.getItem("xp-wallpaper") ||
+                    "assets/images/wallpaper/Bliss.jpg";
+
+                if (theme !== "luna") {
+                    document.documentElement.classList.add("theme-" + theme);
+                }
+
+                // Apply wallpaper early via CSS variable
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    'url("' + wallpaper + '")',
+                );
+
+                // Position Search Box early to avoid jump
+                const searchPos = localStorage.getItem("win-pos-search-window");
+                if (searchPos) {
+                    try {
+                        const pos = JSON.parse(searchPos);
+                        const style = document.createElement("style");
+                        style.innerHTML = `#search-window { left: ${pos.left} !important; top: ${pos.top} !important; transform: none !important; }`;
+                        document.head.appendChild(style);
+                    } catch (e) {}
+                }
+            })();
+        </script>
     </head>
     <body>
         <div id="desktop" class="desktop">
+            <div
+                id="explorer-window"
+                class="xp-window explorer-window hidden"
+                style="width: 800px; height: 500px"
+            >
+                <div class="win-titlebar">
+                    <img
+                        src="assets/images/icons/folder-icon.png"
+                        class="win-icon"
+                        alt=""
+                    />
+                    <span id="explorer-title">My Bookmarks</span>
+                    <div class="win-controls">
+                        <button
+                            id="explorer-close"
+                            class="win-btn btn-close"
+                            type="button"
+                        >
+                            X
+                        </button>
+                    </div>
+                </div>
+                <div class="explorer-toolbar">
+                    <div class="explorer-toolbar-row">
+                        <div class="explorer-nav-buttons">
+                            <button
+                                id="explorer-back"
+                                class="explorer-toolbar-btn"
+                                disabled
+                            >
+                                <img
+                                    src="assets/images/icons/search-icon.webp"
+                                    style="transform: rotate(180deg)"
+                                    alt=""
+                                />
+                                <span>Back</span>
+                            </button>
+                            <button
+                                id="explorer-up"
+                                class="explorer-toolbar-btn"
+                            >
+                                <img
+                                    src="assets/images/icons/folder-icon.png"
+                                    alt=""
+                                />
+                                <span>Up</span>
+                            </button>
+                        </div>
+                        <div class="explorer-separator-v"></div>
+                        <div class="explorer-action-buttons">
+                            <button
+                                id="explorer-goto-desktop"
+                                class="explorer-toolbar-btn"
+                            >
+                                <img
+                                    src="assets/images/icons/windows-xp-logo.png"
+                                    alt=""
+                                />
+                                <span>Desktop</span>
+                            </button>
+                            <button
+                                id="explorer-new-folder"
+                                class="explorer-toolbar-btn"
+                            >
+                                <img
+                                    src="assets/images/icons/folder-icon.png"
+                                    alt=""
+                                />
+                                <span>New Folder</span>
+                            </button>
+                            <button
+                                id="explorer-new-bookmark"
+                                class="explorer-toolbar-btn"
+                            >
+                                <img
+                                    src="assets/images/icons/internet-explorer-icon.svg"
+                                    alt=""
+                                />
+                                <span>New Bookmark</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="explorer-address-bar">
+                        <label>Address</label>
+                        <div class="explorer-address-input-container">
+                            <img
+                                src="assets/images/icons/folder-icon.png"
+                                alt=""
+                            />
+                            <input
+                                type="text"
+                                id="explorer-address-input"
+                                readonly
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="explorer-main">
+                    <div class="explorer-sidebar">
+                        <div class="explorer-tree-header">Folders</div>
+                        <div id="explorer-tree" class="explorer-tree"></div>
+                    </div>
+                    <div id="explorer-grid" class="explorer-grid"></div>
+                </div>
+
+                <div class="explorer-statusbar">
+                    <span id="explorer-status-count">0 objects</span>
+                </div>
+            </div>
+
             <div class="xp-search-container">
-                <div class="xp-search-box">
-                    <div class="xp-search-title">Search the Web</div>
-                    <div class="xp-search-inner">
+                <div id="search-window" class="xp-window search-window">
+                    <div class="win-titlebar">
+                        <img
+                            src="assets/images/icons/search-icon.webp"
+                            class="win-icon"
+                            alt=""
+                        />
+                        <span>Search the Web</span>
+                        <div class="win-controls">
+                            <button
+                                id="search-close"
+                                class="win-btn btn-close"
+                                type="button"
+                            >
+                                X
+                            </button>
+                        </div>
+                    </div>
+                    <div class="win-content xp-search-inner">
                         <label for="search-input"
                             >Type a search term or web address:</label
                         >
@@ -22,11 +177,13 @@
                                 placeholder="Search the web..."
                                 autocomplete="off"
                             />
-                            <button id="search-btn">Search</button>
+                            <button id="search-btn" class="xp-btn">
+                                Search
+                            </button>
                         </div>
                         <div class="xp-search-extra">
-                            <button id="add-shortcut-btn" class="xp-btn-subtle">
-                                + Add Shortcut
+                            <button id="add-shortcut-btn" class="xp-btn">
+                                + Add Bookmark
                             </button>
                         </div>
                     </div>
@@ -81,6 +238,13 @@
                                 alt=""
                             />
                             <span>Notepad</span>
+                        </div>
+                        <div id="start-minesweeper" class="start-item-small">
+                            <img
+                                src="assets/images/icons/minesweeper-icon.webp"
+                                alt=""
+                            />
+                            <span>Minesweeper</span>
                         </div>
                         <div id="start-task-manager" class="start-item-small">
                             <img
@@ -170,7 +334,7 @@
                 style="width: 360px"
             >
                 <div class="win-titlebar">
-                    <span>Add Shortcut</span>
+                    <span>Add Bookmark</span>
                     <div class="win-controls">
                         <button class="win-btn btn-close" type="button">
                             X
@@ -192,6 +356,21 @@
                             id="shortcut-url"
                             type="text"
                             placeholder="https://example.com"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <div class="field">
+                        <label for="shortcut-folder">Folder:</label>
+                        <select id="shortcut-folder">
+                            <option value="1">Bookmarks Bar</option>
+                            <option value="new">+ Create New Folder...</option>
+                        </select>
+                    </div>
+                    <div id="new-folder-field" class="field hidden">
+                        <label for="new-folder-name">New Folder Name:</label>
+                        <input
+                            id="new-folder-name"
+                            type="text"
                             autocomplete="off"
                         />
                     </div>
@@ -458,6 +637,51 @@
                 </div>
             </div>
 
+            <div
+                id="minesweeper-window"
+                class="xp-window minesweeper-window hidden"
+            >
+                <div class="win-titlebar">
+                    <img
+                        src="assets/images/icons/minesweeper-icon.webp"
+                        class="win-icon"
+                        alt=""
+                    />
+                    <span>Minesweeper</span>
+                    <div class="win-controls">
+                        <button
+                            id="minesweeper-close"
+                            class="win-btn btn-close"
+                            type="button"
+                        >
+                            X
+                        </button>
+                    </div>
+                </div>
+                <div class="minesweeper-menubar">
+                    <button id="ms-game-menu" type="button">Game</button>
+                    <button id="ms-help-menu" type="button">Help</button>
+                </div>
+                <div id="ms-game-dropdown" class="notepad-dropdown hidden">
+                    <button id="ms-new-game-btn" type="button">New</button>
+                    <div class="start-separator"></div>
+                    <button id="ms-exit-btn" type="button">Exit</button>
+                </div>
+                <div class="minesweeper-container">
+                    <div class="minesweeper-header">
+                        <div id="ms-mine-count" class="ms-digit-display">
+                            010
+                        </div>
+                        <button
+                            id="ms-reset-btn"
+                            class="ms-smiley-btn"
+                        ></button>
+                        <div id="ms-timer" class="ms-digit-display">000</div>
+                    </div>
+                    <div id="ms-grid" class="ms-grid"></div>
+                </div>
+            </div>
+
             <div class="taskbar">
                 <div id="start-btn" class="start-button">
                     <span class="start-text">start</span>
@@ -485,6 +709,17 @@
                         />
                         <span>Untitled - Notepad</span>
                     </div>
+                    <div
+                        id="minesweeper-task-btn"
+                        class="task-item hidden"
+                        title="Minesweeper"
+                    >
+                        <img
+                            src="assets/images/icons/minesweeper-icon.webp"
+                            alt=""
+                        />
+                        <span>Minesweeper</span>
+                    </div>
                 </div>
                 <div class="tray">
                     <div id="tray-clock" class="tray-clock">00:00 AM</div>
@@ -492,6 +727,7 @@
             </div>
         </div>
 
+        <script src="minesweeper.js"></script>
         <script src="app.js"></script>
     </body>
 </html>
