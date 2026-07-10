@@ -14,6 +14,12 @@
     align-items: center;
 }
 
+.user{
+    padding: 0.25rem;
+    font-family: monospace;
+    font-size: inherit;
+}
+
 .cmdinput, .cmdinputprev{
     width: 100%;
     padding: 0.25rem;
@@ -22,8 +28,6 @@
     font-family: monospace;
     font-size: inherit;
 }
-
-
 
 .cmdinput:focus {
     border: none;

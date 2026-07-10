@@ -18,7 +18,7 @@
   }
 
   function blinkUpdate() {
-    console.log(elements.cmdinput)
+    // console.log(elements.cmdinput)
     elements.cmdinput.focus();
   }
 
@@ -46,14 +46,14 @@
   // event listeners
   // blink when webpage first reload
   window.addEventListener("DOMContentLoaded", () => {
-    // blinkUpdate()
+    blinkUpdate()
   });
 
   // when user click anywhere it should only focus the latest
   window.addEventListener("click", (e) => {
     // console.log(elements.cmdinputs)
     // updateElements()
-    // blinkUpdate()
+    blinkUpdate()
   })
 
   // what should happen when enter
