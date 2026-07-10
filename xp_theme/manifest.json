@@ -11,7 +11,13 @@
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "permissions": ["storage", "system.cpu", "system.memory", "tabs"],
+  "permissions": [
+    "storage",
+    "system.cpu",
+    "system.memory",
+    "tabs",
+    "bookmarks"
+  ],
   "action": {
     "default_title": "Windows XP New Tab"
   }

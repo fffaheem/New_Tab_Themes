@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   App.init();
 });
 
-const App = {
+window.App = {
   shortcuts: [],
   cpuHistory: new Array(50).fill(0),
   memHistory: new Array(50).fill(0),
@@ -39,6 +39,9 @@ const App = {
     { name: "Wind", path: "assets/images/wallpaper/Wind.jpg" },
   ],
   customWallpapers: [],
+  bookmarkTree: [],
+  currentFolderId: "1", // Root bookmark folder usually
+  historyStack: [],
 
   init() {
     this.initThemes();
@@ -46,10 +49,14 @@ const App = {
     this.initStartButton();
     this.initStartMenuInteraction();
     this.initSearch();
-    this.initShortcuts();
+    this.initBookmarks();
+    this.initExplorer();
     this.initNotepad();
     this.initTaskManager();
     this.initRunDialog();
+    if (typeof Minesweeper !== "undefined") {
+      Minesweeper.init();
+    }
   },
 
   initClock() {
@@ -119,17 +126,58 @@ const App = {
     const searchItem = document.getElementById("start-search");
     if (searchItem) {
       searchItem.onclick = () => {
+        const win = document.getElementById("search-window");
+        win?.classList.remove("hidden");
         document.getElementById("search-input")?.focus();
         document.getElementById("start-menu")?.classList.add("hidden");
       };
     }
   },
 
+  getIcon(item) {
+    if (!item.url) return "assets/images/icons/folder-icon.png";
+    try {
+      const url = new URL(item.url);
+      if (url.protocol === "chrome:") {
+        if (url.hostname === "settings")
+          return "assets/images/icons/control-panel-icon.webp";
+        if (url.hostname === "history")
+          return "assets/images/icons/search-icon.webp";
+        if (url.hostname === "downloads")
+          return "assets/images/icons/folder-icon.png";
+        return "assets/images/icons/internet-explorer-icon.svg";
+      }
+      return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+    } catch (e) {
+      return "assets/images/icons/internet-explorer-icon.svg";
+    }
+  },
+
   initSearch() {
     const input = document.getElementById("search-input");
     const btn = document.getElementById("search-btn");
+    const searchWindow = document.getElementById("search-window");
+    const closeBtn = document.getElementById("search-close");
 
-    if (!input || !btn) return;
+    if (!input || !btn || !searchWindow) return;
+
+    this.makeWindowDraggable(searchWindow);
+
+    if (closeBtn) {
+      closeBtn.onclick = () => searchWindow.classList.add("hidden");
+    }
+
+    const stored = localStorage.getItem("win-pos-search-window");
+    if (stored) {
+      const pos = JSON.parse(stored);
+      searchWindow.style.left = pos.left;
+      searchWindow.style.top = pos.top;
+      searchWindow.style.transform = "none";
+    } else {
+      searchWindow.style.left = "50%";
+      searchWindow.style.top = "50%";
+      searchWindow.style.transform = "translate(-50%, -50%)";
+    }
 
     const doSearch = () => {
       const query = input.value.trim();
@@ -146,7 +194,7 @@ const App = {
     };
   },
 
-  initShortcuts() {
+  initBookmarks() {
     const addBtn = document.getElementById("add-shortcut-btn");
     const modal = document.getElementById("shortcut-modal");
     const cancelBtn = document.getElementById("shortcut-cancel");
@@ -154,24 +202,53 @@ const App = {
 
     const urlInput = document.getElementById("shortcut-url");
     const nameInput = document.getElementById("shortcut-name");
-    if (!addBtn || !modal || !cancelBtn || !okBtn || !urlInput || !nameInput) {
+    const folderSelect = document.getElementById("shortcut-folder");
+    const newFolderField = document.getElementById("new-folder-field");
+    const newFolderNameInput = document.getElementById("new-folder-name");
+
+    if (
+      !addBtn ||
+      !modal ||
+      !cancelBtn ||
+      !okBtn ||
+      !urlInput ||
+      !nameInput ||
+      !folderSelect ||
+      !newFolderField ||
+      !newFolderNameInput
+    ) {
       return;
     }
 
     const closeBtn = modal.querySelector(".btn-close");
     if (!closeBtn) return;
 
-    const stored = localStorage.getItem("xp-shortcuts");
-    if (stored) {
-      try {
-        this.shortcuts = JSON.parse(stored);
-        this.renderShortcuts();
-      } catch (e) {
-        this.shortcuts = [];
+    this.fetchBookmarks();
+
+    const populateFolders = () => {
+      const folders = this.getAllFolders();
+      let newOption = folderSelect.querySelector('option[value="new"]');
+      if (!newOption) {
+        newOption = document.createElement("option");
+        newOption.value = "new";
+        newOption.textContent = "+ Create New Folder...";
       }
-    }
+
+      folderSelect.innerHTML = "";
+      folders.forEach((f) => {
+        const opt = document.createElement("option");
+        opt.value = f.id;
+        opt.textContent = f.title;
+        if (f.id === this.currentFolderId) opt.selected = true;
+        folderSelect.appendChild(opt);
+      });
+      folderSelect.appendChild(newOption);
+    };
 
     addBtn.onclick = () => {
+      populateFolders();
+      newFolderField.classList.add("hidden");
+      newFolderNameInput.value = "";
       modal.classList.remove("hidden");
       modal.style.left = "50%";
       modal.style.top = "50%";
@@ -179,10 +256,20 @@ const App = {
       urlInput.focus();
     };
 
+    folderSelect.onchange = () => {
+      if (folderSelect.value === "new") {
+        newFolderField.classList.remove("hidden");
+        newFolderNameInput.focus();
+      } else {
+        newFolderField.classList.add("hidden");
+      }
+    };
+
     const closeModal = () => {
       modal.classList.add("hidden");
       urlInput.value = "";
       nameInput.value = "";
+      newFolderNameInput.value = "";
     };
 
     closeBtn.onclick = closeModal;
@@ -191,9 +278,16 @@ const App = {
     okBtn.onclick = () => {
       let url = urlInput.value.trim();
       const name = nameInput.value.trim();
+      const folderId = folderSelect.value;
+      const newFolderName = newFolderNameInput.value.trim();
 
       if (!url || !name) {
-        alert("Please fill in both fields.");
+        alert("Please fill in both name and URL.");
+        return;
+      }
+
+      if (folderId === "new" && !newFolderName) {
+        alert("Please enter a name for the new folder.");
         return;
       }
 
@@ -201,48 +295,322 @@ const App = {
         url = "https://" + url;
       }
 
-      try {
-        const urlObj = new URL(url);
-        const id = Date.now();
-        const icon = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
-        this.shortcuts.push({ id, url, name, icon });
-        this.saveShortcuts();
-        this.renderShortcuts();
-        closeModal();
-      } catch (e) {
-        alert("Please enter a valid URL.");
+      const createBookmark = (parentId) => {
+        if (window.chrome && chrome.bookmarks) {
+          chrome.bookmarks.create(
+            {
+              parentId: parentId,
+              title: name,
+              url: url,
+            },
+            () => {
+              closeModal();
+            },
+          );
+        } else {
+          try {
+            const urlObj = new URL(url);
+            const id = Date.now().toString();
+            const icon = this.getIcon({ url });
+            const stored = localStorage.getItem("xp-bookmarks") || "[]";
+            const bookmarks = JSON.parse(stored);
+            bookmarks.push({ id, url, title: name, icon });
+            localStorage.setItem("xp-bookmarks", JSON.stringify(bookmarks));
+            this.fetchBookmarks();
+            closeModal();
+          } catch (e) {
+            alert("Please enter a valid URL.");
+          }
+        }
+      };
+
+      if (folderId === "new") {
+        if (window.chrome && chrome.bookmarks) {
+          chrome.bookmarks.create(
+            { parentId: "1", title: newFolderName },
+            (newFolder) => {
+              createBookmark(newFolder.id);
+            },
+          );
+        } else {
+          createBookmark("1");
+        }
+      } else {
+        createBookmark(folderId);
       }
     };
   },
 
-  saveShortcuts() {
-    localStorage.setItem("xp-shortcuts", JSON.stringify(this.shortcuts));
+  fetchBookmarks() {
+    if (window.chrome && chrome.bookmarks) {
+      chrome.bookmarks.getTree((tree) => {
+        this.bookmarkTree = tree;
+        this.renderDesktopBookmarks();
+        this.renderExplorer();
+      });
+
+      if (!this.bookmarkListenersAdded) {
+        chrome.bookmarks.onCreated.addListener(() => this.fetchBookmarks());
+        chrome.bookmarks.onRemoved.addListener(() => this.fetchBookmarks());
+        chrome.bookmarks.onChanged.addListener(() => this.fetchBookmarks());
+        chrome.bookmarks.onMoved.addListener(() => this.fetchBookmarks());
+        this.bookmarkListenersAdded = true;
+      }
+    } else {
+      const stored = localStorage.getItem("xp-bookmarks");
+      if (stored) {
+        try {
+          const bookmarks = JSON.parse(stored);
+          this.bookmarkTree = [
+            { children: [{ children: bookmarks, id: "1" }] },
+          ];
+          this.renderDesktopBookmarks();
+          this.renderExplorer();
+        } catch (e) {
+          this.bookmarkTree = [];
+        }
+      }
+    }
   },
 
-  renderShortcuts() {
+  renderDesktopBookmarks() {
     const grid = document.getElementById("shortcut-grid");
     if (!grid) return;
     grid.innerHTML = "";
 
-    this.shortcuts.forEach((s) => {
+    const root = this.bookmarkTree[0];
+    if (!root || !root.children) return;
+
+    const bar = root.children.find((c) => c.id === "1");
+    let itemsToShow = bar && bar.children ? [...bar.children] : [];
+
+    if (itemsToShow.length === 0) {
+      itemsToShow = root.children.filter((c) => c.id !== "0");
+    }
+
+    itemsToShow.forEach((b) => {
       const el = document.createElement("div");
       el.className = "shortcut";
-      el.title = s.url;
+      el.title = b.url || "";
+      const icon = this.getIcon(b);
+
       el.innerHTML = `
-                <img src="${s.icon}" onerror="this.src='https://cdn.jsdelivr.net/gh/trapd00r/win95-winxp_icons@master/Windows%20XP/Internet%20Explorer.png'">
-                <span>${s.name}</span>
+                <img src="${icon}" onerror="this.src='assets/images/icons/internet-explorer-icon.svg'">
+                <span>${b.title}</span>
             `;
-      el.onclick = () => (window.location.href = s.url);
+
+      el.onclick = () => {
+        if (b.url) {
+          window.location.href = b.url;
+        } else {
+          this.openExplorer(b.id);
+        }
+      };
       el.oncontextmenu = (e) => {
         e.preventDefault();
-        if (confirm(`Delete shortcut for "${s.name}"?`)) {
-          this.shortcuts = this.shortcuts.filter((x) => x.id !== s.id);
-          this.saveShortcuts();
-          this.renderShortcuts();
+        if (confirm(`Delete "${b.title}"?`)) {
+          if (window.chrome && chrome.bookmarks) {
+            if (b.url)
+              chrome.bookmarks.remove(b.id, () => this.fetchBookmarks());
+            else chrome.bookmarks.removeTree(b.id, () => this.fetchBookmarks());
+          } else {
+            const stored = localStorage.getItem("xp-bookmarks");
+            if (stored) {
+              let bookmarks = JSON.parse(stored);
+              bookmarks = bookmarks.filter((x) => x.id !== b.id);
+              localStorage.setItem("xp-bookmarks", JSON.stringify(bookmarks));
+              this.fetchBookmarks();
+            }
+          }
         }
       };
       grid.appendChild(el);
     });
+  },
+
+  initExplorer() {
+    const windowEl = document.getElementById("explorer-window");
+    const closeBtn = document.getElementById("explorer-close");
+    const backBtn = document.getElementById("explorer-back");
+    const upBtn = document.getElementById("explorer-up");
+    const addressInput = document.getElementById("explorer-address-input");
+
+    if (!windowEl || !closeBtn || !backBtn || !upBtn || !addressInput) return;
+
+    this.makeWindowDraggable(windowEl);
+
+    closeBtn.onclick = () => windowEl.classList.add("hidden");
+
+    backBtn.onclick = () => {
+      if (this.historyStack.length > 1) {
+        this.historyStack.pop();
+        this.currentFolderId = this.historyStack[this.historyStack.length - 1];
+        this.renderExplorer();
+      }
+    };
+
+    upBtn.onclick = () => {
+      const folder = this.findBookmarkById(this.currentFolderId);
+      if (folder && folder.parentId) {
+        this.openExplorer(folder.parentId);
+      }
+    };
+
+    const desktopBtn = document.getElementById("explorer-goto-desktop");
+    if (desktopBtn) {
+      desktopBtn.onclick = (e) => {
+        e.preventDefault();
+        this.openExplorer("1");
+      };
+    }
+
+    const newFolderBtn = document.getElementById("explorer-new-folder");
+    if (newFolderBtn) {
+      newFolderBtn.onclick = (e) => {
+        e.preventDefault();
+        const name = prompt("Enter folder name:");
+        if (name && window.chrome && chrome.bookmarks) {
+          chrome.bookmarks.create(
+            { parentId: this.currentFolderId, title: name },
+            () => this.fetchBookmarks(),
+          );
+        }
+      };
+    }
+
+    const newBookmarkBtn = document.getElementById("explorer-new-bookmark");
+    if (newBookmarkBtn) {
+      newBookmarkBtn.onclick = (e) => {
+        e.preventDefault();
+        document.getElementById("add-shortcut-btn")?.click();
+      };
+    }
+  },
+
+  openExplorer(folderId) {
+    const windowEl = document.getElementById("explorer-window");
+    if (!windowEl) return;
+    windowEl.classList.remove("hidden");
+    windowEl.style.left = "100px";
+    windowEl.style.top = "50px";
+    windowEl.style.transform = "none";
+
+    if (this.currentFolderId !== folderId) {
+      this.currentFolderId = folderId;
+      this.historyStack.push(folderId);
+    } else if (this.historyStack.length === 0) {
+      this.historyStack.push(folderId);
+    }
+    this.renderExplorer();
+  },
+
+  renderExplorer() {
+    const grid = document.getElementById("explorer-grid");
+    const addressInput = document.getElementById("explorer-address-input");
+    const titleEl = document.getElementById("explorer-title");
+    const countEl = document.getElementById("explorer-status-count");
+    const backBtn = document.getElementById("explorer-back");
+    const treeGrid = document.getElementById("explorer-tree");
+
+    if (!grid || !addressInput || !titleEl || !countEl || !treeGrid) return;
+
+    const folder = this.findBookmarkById(this.currentFolderId);
+    if (!folder) return;
+
+    titleEl.textContent = folder.title || "My Bookmarks";
+    addressInput.value = folder.title || "My Bookmarks";
+    grid.innerHTML = "";
+
+    const items = folder.children || [];
+    items.forEach((item) => {
+      const el = document.createElement("div");
+      el.className = "explorer-item";
+      const icon = this.getIcon(item);
+
+      el.innerHTML = `
+                <img src="${icon}" onerror="this.src='assets/images/icons/internet-explorer-icon.svg'">
+                <span>${item.title}</span>
+            `;
+
+      el.onclick = () => {
+        if (item.url) {
+          window.location.href = item.url;
+        } else {
+          this.openExplorer(item.id);
+        }
+      };
+
+      el.oncontextmenu = (e) => {
+        e.preventDefault();
+        if (confirm(`Delete "${item.title}"?`)) {
+          if (window.chrome && chrome.bookmarks) {
+            if (item.url)
+              chrome.bookmarks.remove(item.id, () => this.fetchBookmarks());
+            else
+              chrome.bookmarks.removeTree(item.id, () => this.fetchBookmarks());
+          }
+        }
+      };
+
+      grid.appendChild(el);
+    });
+
+    countEl.textContent = `${items.length} objects`;
+    backBtn.disabled = this.historyStack.length <= 1;
+
+    treeGrid.innerHTML = "";
+    this.renderTree(this.bookmarkTree[0], treeGrid, 0);
+  },
+
+  renderTree(node, container, level) {
+    if (!node) return;
+    if (node.children) {
+      node.children.forEach((child) => {
+        if (!child.url) {
+          const el = document.createElement("div");
+          el.className = "tree-item";
+          if (child.id === this.currentFolderId) el.classList.add("active");
+
+          el.innerHTML = `
+            ${'<div class="tree-indent"></div>'.repeat(level)}
+            <img src="assets/images/icons/folder-icon.png">
+            <span>${child.title || "Bookmarks"}</span>
+          `;
+
+          el.onclick = () => this.openExplorer(child.id);
+          container.appendChild(el);
+          this.renderTree(child, container, level + 1);
+        }
+      });
+    }
+  },
+
+  getAllFolders(nodes = this.bookmarkTree, folders = []) {
+    for (const node of nodes) {
+      if (!node.url && node.id !== "0") {
+        folders.push({
+          id: node.id,
+          title:
+            node.title ||
+            (node.id === "1" ? "Bookmarks Bar" : "(Untitled Folder)"),
+        });
+      }
+      if (node.children) {
+        this.getAllFolders(node.children, folders);
+      }
+    }
+    return folders;
+  },
+
+  findBookmarkById(id, nodes = this.bookmarkTree) {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = this.findBookmarkById(id, node.children);
+        if (found) return found;
+      }
+    }
+    return null;
   },
 
   initThemes() {
@@ -403,12 +771,12 @@ const App = {
   },
 
   applyTheme(theme) {
-    document.body.classList.remove("theme-olive", "theme-silver");
+    document.documentElement.classList.remove("theme-olive", "theme-silver");
     if (theme === "olive") {
-      document.body.classList.add("theme-olive");
+      document.documentElement.classList.add("theme-olive");
     }
     if (theme === "silver") {
-      document.body.classList.add("theme-silver");
+      document.documentElement.classList.add("theme-silver");
     }
   },
 
@@ -466,14 +834,14 @@ const App = {
   },
 
   applyWallpaper(path) {
-    const desktop = document.getElementById("desktop");
     const allWallpapers = [...this.wallpapers, ...this.customWallpapers];
     const nextPath = allWallpapers.some((wallpaper) => wallpaper.path === path)
       ? path
       : this.defaultWallpaper;
-    if (desktop) {
-      desktop.style.backgroundImage = `url("${nextPath}")`;
-    }
+    document.documentElement.style.setProperty(
+      "--bg-image",
+      `url("${nextPath}")`,
+    );
   },
 
   initNotepad() {
@@ -614,11 +982,29 @@ const App = {
     const titlebar = windowEl.querySelector(".win-titlebar");
     if (!titlebar) return;
 
+    const id = windowEl.id;
+    const savePos = () => {
+      if (id) {
+        localStorage.setItem(
+          `win-pos-${id}`,
+          JSON.stringify({
+            left: windowEl.style.left,
+            top: windowEl.style.top,
+          }),
+        );
+      }
+    };
+
     let isDragging = false;
     let offset = { x: 0, y: 0 };
 
     titlebar.onmousedown = (e) => {
       isDragging = true;
+      const rect = windowEl.getBoundingClientRect();
+      windowEl.style.transform = "none";
+      windowEl.style.left = rect.left + "px";
+      windowEl.style.top = rect.top + "px";
+
       offset = {
         x: e.clientX - windowEl.offsetLeft,
         y: e.clientY - windowEl.offsetTop,
@@ -629,11 +1015,13 @@ const App = {
       if (!isDragging) return;
       windowEl.style.left = e.clientX - offset.x + "px";
       windowEl.style.top = e.clientY - offset.y + "px";
-      windowEl.style.transform = "none";
     });
 
     document.addEventListener("mouseup", () => {
-      isDragging = false;
+      if (isDragging) {
+        isDragging = false;
+        savePos();
+      }
     });
   },
 
@@ -711,10 +1099,17 @@ const App = {
     taskBtn.classList.remove("hidden");
     taskBtn.classList.add("active");
 
-    const winWidth = 400;
-    windowEl.style.width = winWidth + "px";
-    windowEl.style.left = window.innerWidth - winWidth - 20 + "px";
-    windowEl.style.top = window.innerHeight - 400 + "px";
+    const stored = localStorage.getItem("win-pos-taskmgr-window");
+    if (stored) {
+      const pos = JSON.parse(stored);
+      windowEl.style.left = pos.left;
+      windowEl.style.top = pos.top;
+    } else {
+      const winWidth = 400;
+      windowEl.style.width = winWidth + "px";
+      windowEl.style.left = window.innerWidth - winWidth - 20 + "px";
+      windowEl.style.top = window.innerHeight - 400 + "px";
+    }
     windowEl.style.transform = "none";
 
     this.startMonitoring();
@@ -874,7 +1269,6 @@ const App = {
 
     closeBtn.onclick = close;
 
-    // Fix run-cancel button
     const runCancelBtn = document.getElementById("run-cancel");
     if (runCancelBtn) runCancelBtn.onclick = close;
 
