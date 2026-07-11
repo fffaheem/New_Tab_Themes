@@ -1,5 +1,7 @@
-(() => {
+import echo from "./commands/echo.js";
 
+(() => {
+  
   let elements = {
     body: document.querySelector("body"),
     cmdout: document.querySelectorAll('.cmdout'),
@@ -71,6 +73,13 @@
       div.classList.add("cmdout");
       elements.body.append(div)
     } else {
+      const parts = e.target.value.split(/\s+/);
+      const commandName = parts[0];
+      const args = parts.slice(1);
+      if (commandName == "echo") {
+        echo.execute({ args });
+      }
+      // it's output spit
       let div = document.createElement("div");
       div.innerHTML = `<div class="user">Admine</div>
       <input class="cmdinput" type="text">`
