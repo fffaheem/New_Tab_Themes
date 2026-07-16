@@ -5,35 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>New Tab</title>
         <link rel="stylesheet" href="style.css" />
-        <script>
-            (function () {
-                const theme = localStorage.getItem("xp-color-scheme") || "luna";
-                const wallpaper =
-                    localStorage.getItem("xp-wallpaper") ||
-                    "assets/images/wallpaper/Bliss.jpg";
-
-                if (theme !== "luna") {
-                    document.documentElement.classList.add("theme-" + theme);
-                }
-
-                // Apply wallpaper early via CSS variable
-                document.documentElement.style.setProperty(
-                    "--bg-image",
-                    'url("' + wallpaper + '")',
-                );
-
-                // Position Search Box early to avoid jump
-                const searchPos = localStorage.getItem("win-pos-search-window");
-                if (searchPos) {
-                    try {
-                        const pos = JSON.parse(searchPos);
-                        const style = document.createElement("style");
-                        style.innerHTML = `#search-window { left: ${pos.left} !important; top: ${pos.top} !important; transform: none !important; }`;
-                        document.head.appendChild(style);
-                    } catch (e) {}
-                }
-            })();
-        </script>
+        <script src="theme-init.js"></script>
     </head>
     <body>
         <div id="desktop" class="desktop">

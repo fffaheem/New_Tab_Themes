@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Windows XP New Tab",
-  "version": "1.1",
+  "version": "1.2",
   "description": "A high-fidelity Windows XP themed New Tab page.",
   "icons": {
     "16": "assets/images/icons/windows-xp-logo.png",
